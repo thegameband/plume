@@ -10,6 +10,7 @@
 
 import type { Edge } from "@xyflow/svelte";
 import { makeNode, type PlumeNode } from "../graph/graphStore.svelte.js";
+import { fadeCurve } from "../builder/nodes.js";
 
 interface Preset {
   name: string;
@@ -105,7 +106,7 @@ export const PRESETS: Preset[] = [
         {},
         { amplitude: 4.5, frequency: 1.6, speed: 1.0 },
         { acceleration: [0, -0.25, 0] },
-        { fadeIn: 0.05, fadeOut: 0.5 },
+        { curve: fadeCurve(0.05, 0.5) },
         {
           gradient: {
             kind: "gradient",
@@ -472,7 +473,7 @@ export const PRESETS: Preset[] = [
         emberI,
         patch(emberG, { acceleration: [0, 1.0, 0] }),
         patch(emberTurb, { amplitude: 1.4, frequency: 1.2, speed: 1.0, octaves: 2 }),
-        patch(emberA, { fadeIn: 0.05, fadeOut: 0.5 }),
+        patch(emberA, { curve: fadeCurve(0.05, 0.5) }),
         patch(emberR, {
           shader: "texture_additive",
           texture: emberTex,
@@ -614,7 +615,7 @@ export const PRESETS: Preset[] = [
             ],
           },
         },
-        { fadeIn: 0.18, fadeOut: 0.55 },
+        { curve: fadeCurve(0.18, 0.55) },
         {
           shader: "texture_luma_alpha",
           texture: texture("smoke-puff.png"),
@@ -712,7 +713,7 @@ export const PRESETS: Preset[] = [
           worldSpace: true,
         }),
         patch(discDrag, { coefficient: 0.3 }),
-        patch(discAlpha, { fadeIn: 0.1, fadeOut: 0.25 }),
+        patch(discAlpha, { curve: fadeCurve(0.1, 0.25) }),
         patch(discColorOverLife, {
           gradient: {
             kind: "gradient",
@@ -843,7 +844,7 @@ export const PRESETS: Preset[] = [
         { acceleration: [0, -8, 0] },
         { coefficient: 0.08 },
         { maxSpeed: 18, damping: 1 },
-        { fadeIn: 0, fadeOut: 0.35 },
+        { curve: fadeCurve(0, 0.35) },
         {
           shader: "soft",
           width: 0.026,
@@ -901,7 +902,7 @@ export const PRESETS: Preset[] = [
         { acceleration: [0, -35, 0] },
         // Powerful high-frequency turbulence makes the zig-zag.
         { amplitude: 38, frequency: 24, speed: 5, octaves: 4 },
-        { fadeIn: 0.0, fadeOut: 0.65 },
+        { curve: fadeCurve(0.0, 0.65) },
         // Thick ribbon "rod" + long history captures the full jagged path.
         {
           shader: "soft",
@@ -953,7 +954,7 @@ export const PRESETS: Preset[] = [
         {},
         { coefficient: 0.75 },
         { minSpeed: 0, maxSpeed: 12, minScale: 0.25, maxScale: 1.45 },
-        { fadeIn: 0.0, fadeOut: 0.5 },
+        { curve: fadeCurve(0.0, 0.5) },
         {
           shader: "soft",
           width: 0.145,
@@ -1079,7 +1080,7 @@ export const PRESETS: Preset[] = [
         { acceleration: [0, -0.32, 0] },
         // Gentle horizontal drift via curl noise — looks like wind.
         { amplitude: 0.55, frequency: 0.32, speed: 0.24 },
-        { fadeIn: 0.18, fadeOut: 0.35 },
+        { curve: fadeCurve(0.18, 0.35) },
         { shader: "soft", blending: "alpha", opacity: 0.95, renderOrder: 0 },
       );
     },
@@ -1147,7 +1148,7 @@ export const PRESETS: Preset[] = [
           friction: 0.62,
           worldSpace: true,
         },
-        { fadeIn: 0, fadeOut: 0.4 },
+        { curve: fadeCurve(0, 0.4) },
         // Small metallic chunks — look like real shatter debris.
         {
           geometry: { kind: "geometry", preset: "box", width: 0.05, height: 0.05, depth: 0.04 },
@@ -1228,7 +1229,7 @@ export const PRESETS: Preset[] = [
         spriteI,
         patch(spriteCurl, { amplitude: 0.75, frequency: 0.75, speed: 0.45 }),
         patch(spriteG, { acceleration: [0, 0.35, 0] }),
-        patch(spriteA, { fadeIn: 0.12, fadeOut: 0.45 }),
+        patch(spriteA, { curve: fadeCurve(0.12, 0.45) }),
         patch(spriteR, {
           shader: "spark",
           blending: "additive",
@@ -1246,7 +1247,7 @@ export const PRESETS: Preset[] = [
         lightI,
         patch(lightCurl, { amplitude: 0.55, frequency: 0.7, speed: 0.4 }),
         patch(lightG, { acceleration: [0, 0.28, 0] }),
-        patch(lightA, { fadeIn: 0.15, fadeOut: 0.5 }),
+        patch(lightA, { curve: fadeCurve(0.15, 0.5) }),
         patch(lightR, {
           lightCount: 8,
           color: [2.6, 1.2, 0.32],
@@ -1351,7 +1352,7 @@ export const PRESETS: Preset[] = [
         rocketIntegrate,
         patch(rocketGravity, { acceleration: [0, -3.5, 0] }),
         patch(rocketDrag, { coefficient: 0.25 }),
-        patch(rocketAlpha, { fadeIn: 0.0, fadeOut: 0.25 }),
+        patch(rocketAlpha, { curve: fadeCurve(0.0, 0.25) }),
         patch(rocketRender, {
           shader: "soft",
           width: 0.045,
@@ -1397,7 +1398,7 @@ export const PRESETS: Preset[] = [
             ],
           },
         }),
-        patch(burstAlpha, { fadeIn: 0.0, fadeOut: 0.6 }),
+        patch(burstAlpha, { curve: fadeCurve(0.0, 0.6) }),
         patch(burstRender, { shader: "spark", blending: "additive", opacity: 1, renderOrder: 6 }),
       ];
 

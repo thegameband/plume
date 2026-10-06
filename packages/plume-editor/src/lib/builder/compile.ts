@@ -28,8 +28,9 @@ import type {
   SdfCollisionMode,
 } from "three-plume";
 import { Curve1D, Gradient, system, sdfSphere, sdfBox, sdfPlane } from "three-plume";
-import { getSpec, type Params } from "./nodes.js";
+import { fadeCurve, getSpec, type CurveKey, type Params } from "./nodes.js";
 import { getTexture } from "./textures.js";
+import { CLOUD_NOISE_TEXTURE_KEY, getCloudNoiseTexture } from "./cloudShaders.js";
 import {
   buildSpriteColorNode,
   buildMeshMaterial,
@@ -159,14 +160,18 @@ export function compileGraph(
     });
   }
 
-  // System-level duration: the longest emitter duration + 1s tail.
-  const maxDuration = Math.max(
-    ...plans.map((p) => readNumber(p.emitterNode.data.params, "duration", 2)),
-  );
-
-  let builder = system("editor_graph")
-    .duration(maxDuration + 1)
-    .loop();
+  // A system loop restarts every emitter, which wipes its live particles. Looping emitters
+  // restart themselves seamlessly, so only add one to replay one-shot emitters — and only
+  // once their last particles have died.
+  let builder = system("editor_graph");
+  if (!plans.every((p) => readBool(p.emitterNode.data.params, "loop", true))) {
+    const replayAfter = Math.max(
+      ...plans.map(
+        (p) => readNumber(p.emitterNode.data.params, "duration", 2) + maxLifetime(p.init),
+      ),
+    );
+    builder = builder.duration(replayAfter).loop();
+  }
 
   for (const plan of plans) {
     const capacity = readNumber(plan.emitterNode.data.params, "capacity", 256);
@@ -308,22 +313,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       e.drag(readNumber(p, "coefficient", 0.5));
       break;
     case "update.alpha_over_life": {
-      // Map two simple knobs (fadeIn, fadeOut) into a 4-keyframe trapezoidal curve. Keeps
-      // the inspector tiny while still producing the most common alpha shape.
-      const fadeIn = clamp01(readNumber(p, "fadeIn", 0.1));
-      const fadeOut = clamp01(readNumber(p, "fadeOut", 0.3));
-      const start = Math.min(fadeIn, 1);
-      const end = Math.max(0, 1 - fadeOut);
-      const curve =
-        start < end
-          ? new Curve1D([
-              { t: 0, v: 0 },
-              { t: start, v: 1 },
-              { t: end, v: 1 },
-              { t: 1, v: 0 },
-            ])
-          : Curve1D.constant(1);
-      e.alphaOverLife(curve);
+      e.alphaOverLife(new Curve1D(alphaCurveKeys(p)));
       break;
     }
     case "update.size_over_life":
@@ -476,15 +466,33 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       const shader = readSelect(
         p,
         "shader",
-        ["soft", "hard", "fire", "smoke", "spark", "texture_additive", "texture_luma_alpha"],
+        [
+          "soft",
+          "hard",
+          "fire",
+          "smoke",
+          "spark",
+          "texture_additive",
+          "texture_luma_alpha",
+          "clouds",
+          "impact_cloud",
+        ],
         "soft",
       ) as SpriteShader;
       // Texture-aware shaders combine texture + particle colour explicitly, so they
       // always get both inputs. Other presets fall back to procedural shaping when no
       // texture was uploaded; if a texture IS uploaded with a procedural shader, the
       // texture wins and the renderer's default (sample × particle.color) is used.
+      // Cloud shaders bring their own noise texture and ignore any upload.
       const isTextureShader = shader === "texture_additive" || shader === "texture_luma_alpha";
-      const colorNode = isTextureShader || !tex ? buildSpriteColorNode(shader) : undefined;
+      const isCloudShader = shader === "clouds" || shader === "impact_cloud";
+      const colorNode =
+        isTextureShader || isCloudShader || !tex ? buildSpriteColorNode(shader) : undefined;
+      const textures: Record<string, THREE.Texture> | undefined = isCloudShader
+        ? { [CLOUD_NOISE_TEXTURE_KEY]: getCloudNoiseTexture() }
+        : tex
+          ? { base: tex }
+          : undefined;
       e.renderSprite({
         blending: readSelect(p, "blending", ["additive", "alpha", "normal"], "additive") as
           | "additive"
@@ -492,7 +500,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
           | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
-        ...(tex ? { textures: { base: tex } } : {}),
+        ...(textures ? { textures } : {}),
         ...(colorNode ? { colorNode } : {}),
       });
       break;
@@ -632,6 +640,19 @@ function readBool(p: Params, key: string, fallback: boolean): boolean {
 }
 function clamp01(n: number): number {
   return n < 0 ? 0 : n > 1 ? 1 : n;
+}
+
+/** Longest particle lifetime an emitter's InitLifetime can roll; 5s (Plume's own guess) if none. */
+function maxLifetime(init: GraphNode[]): number {
+  const node = init.find((n) => n.data.type === "init.lifetime");
+  return node ? readRange(node.data.params, "lifetime", [1, 2])[1] : 5;
+}
+
+/** AlphaOverLife keys, clamped to 0..1 unless the node's "Clamp values to 1" is off. */
+export function alphaCurveKeys(p: Params): CurveKey[] {
+  const keys = readCurve(p, "curve", fadeCurve(0.1, 0.3).keys).keyframes;
+  if (p["clampToOne"] === false) return keys;
+  return keys.map((k) => ({ t: k.t, v: clamp01(k.v) }));
 }
 
 function readCurve(p: Params, key: string, fallbackKeys: { t: number; v: number }[]): Curve1D {

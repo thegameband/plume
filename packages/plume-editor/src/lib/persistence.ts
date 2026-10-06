@@ -12,7 +12,7 @@
  */
 
 import type { Edge } from "@xyflow/svelte";
-import { getSpec, type Params } from "./builder/nodes.js";
+import { getSpec, migrateParams, type Params } from "./builder/nodes.js";
 import type { PlumeNode } from "./graph/graphStore.svelte.js";
 
 export const STORAGE_KEY = "plume-editor:graph-v1";
@@ -74,7 +74,7 @@ export function deserialize(raw: unknown): { nodes: PlumeNode[]; edges: Edge[] }
       position: { x: raw.position.x, y: raw.position.y },
       data: {
         type: raw.type,
-        params: (raw.params ?? {}) as Params,
+        params: migrateParams(raw.type, (raw.params ?? {}) as Params),
       },
     };
   });

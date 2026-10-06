@@ -2,7 +2,7 @@
   import { onMount, onDestroy, untrack } from "svelte";
   import * as THREE from "three";
   import { Timer } from "three";
-  import { WebGPURenderer, MeshStandardNodeMaterial, PostProcessing } from "three/webgpu";
+  import { WebGPURenderer, MeshStandardNodeMaterial, PostProcessing, type Node } from "three/webgpu";
   import { pass } from "three/tsl";
   import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
@@ -57,6 +57,9 @@
   // Without bloom HDR particle colours look LDR — every Niagara-tier reference
   // VFX has it, so it's a baseline rendering feature, not a polish step.
   let postProcessing: PostProcessing | undefined;
+  let bloomOutput: Node | undefined;
+  let plainOutput: Node | undefined;
+  let bloomEnabled = $state(true);
 
   // Off-screen depth target. `update.depth_collision` reads from this; the
   // ground plane + any opaque mesh particles render here once per frame.
@@ -156,7 +159,9 @@
     // radius=0.85 spreads the glow widely; threshold=0.6 means only HDR pixels
     // (intensity > ~0.6 post-tonemap) contribute to bloom.
     const bloomPass = bloom(scenePass, 0.7, 0.85, 0.6);
-    postProcessing.outputNode = scenePass.add(bloomPass);
+    plainOutput = scenePass;
+    bloomOutput = scenePass.add(bloomPass);
+    postProcessing.outputNode = bloomEnabled ? bloomOutput : plainOutput;
 
     // Depth scene mirrors the ground plane — built lazily the first time a
     // graph compile asks for depth_collision (see ensureDepthPass).
@@ -378,6 +383,14 @@
     });
   });
 
+  // Swapping the output node (rather than zeroing strength) skips the bloom passes entirely.
+  $effect(() => {
+    const enabled = bloomEnabled;
+    if (!postProcessing || !bloomOutput || !plainOutput) return;
+    postProcessing.outputNode = enabled ? bloomOutput : plainOutput;
+    postProcessing.needsUpdate = true;
+  });
+
   // Apply button — skip the initial 0 click.
   $effect(() => {
     if (applyTick === 0) return;
@@ -411,12 +424,38 @@
   });
 </script>
 
-<div class="preview-host" bind:this={host}></div>
+<div class="preview-wrap">
+  <div class="preview-host" bind:this={host}></div>
+  <label class="preview-toggle">
+    <input type="checkbox" bind:checked={bloomEnabled} />
+    Bloom
+  </label>
+</div>
 
 <style>
+  .preview-wrap {
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
   .preview-host {
     width: 100%;
     height: 100%;
     background: #0b0c10;
+  }
+  .preview-toggle {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(17, 19, 26, 0.8);
+    color: #c9ced8;
+    font-size: 12px;
+    cursor: pointer;
+    user-select: none;
   }
 </style>

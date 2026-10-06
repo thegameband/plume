@@ -137,6 +137,44 @@ export interface NodeSpec {
   defaults: Params;
 }
 
+/**
+ * Trapezoid alpha curve: 0 → 1 over the first `fadeIn` of life, 1 → 0 over the last
+ * `fadeOut`. Overlapping fades collapse to a constant 1. This is the shape the old
+ * two-number AlphaOverLife node produced.
+ */
+export function fadeCurve(fadeIn: number, fadeOut: number): { kind: "curve1d"; keys: CurveKey[] } {
+  const start = Math.max(0, Math.min(1, fadeIn));
+  const end = 1 - Math.max(0, Math.min(1, fadeOut));
+  if (start >= end) {
+    return { kind: "curve1d", keys: [{ t: 0, v: 1 }, { t: 1, v: 1 }] };
+  }
+  return {
+    kind: "curve1d",
+    keys: [
+      { t: 0, v: 0 },
+      { t: start, v: 1 },
+      { t: end, v: 1 },
+      { t: 1, v: 0 },
+    ],
+  };
+}
+
+/** Upgrade params saved by older editor versions to the current spec. */
+export function migrateParams(type: string, params: Params): Params {
+  if (type === "update.alpha_over_life" && !("curve" in params)) {
+    const { fadeIn, fadeOut, ...rest } = params;
+    return {
+      ...rest,
+      curve: fadeCurve(
+        typeof fadeIn === "number" ? fadeIn : 0.1,
+        typeof fadeOut === "number" ? fadeOut : 0.3,
+      ),
+      clampToOne: true,
+    };
+  }
+  return params;
+}
+
 const CAT_COLORS: Record<Category, string> = {
   emitter: "#2c5b8c",
   spawn: "#8c5b2c",
@@ -360,10 +398,12 @@ export const NODE_SPECS: NodeSpec[] = [
     label: "AlphaOverLife",
     accent: CAT_COLORS.update,
     fields: [
-      { kind: "number", key: "fadeIn", label: "Fade in", min: 0, max: 1, step: 0.01 },
-      { kind: "number", key: "fadeOut", label: "Fade out", min: 0, max: 1, step: 0.01 },
+      { kind: "curve", key: "curve", label: "Alpha over life" },
+      // Off lets shaders that read alpha as a parameter (e.g. clouds' Opacity Control)
+      // be overdriven; plain alpha-blended shaders misbehave above 1.
+      { kind: "boolean", key: "clampToOne", label: "Clamp values to 1" },
     ],
-    defaults: { fadeIn: 0.1, fadeOut: 0.3 },
+    defaults: { curve: fadeCurve(0.1, 0.3), clampToOne: true },
   },
   {
     type: "update.size_over_life",
@@ -640,6 +680,8 @@ export const NODE_SPECS: NodeSpec[] = [
           "spark",
           "texture_additive",
           "texture_luma_alpha",
+          "clouds",
+          "impact_cloud",
         ],
       },
       {

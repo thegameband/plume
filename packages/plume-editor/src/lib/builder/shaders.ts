@@ -23,6 +23,7 @@ import {
   mx_noise_float,
 } from "three/tsl";
 import type { ColorNodeContext, ColorNodeFn } from "three-plume";
+import { cloudsColorNode, impactCloudColorNode } from "./cloudShaders.js";
 
 export type SpriteShader =
   | "soft"
@@ -36,7 +37,10 @@ export type SpriteShader =
   // blending), and `texture_luma_alpha` for alpha-blended smoke / dust where you need
   // a luminance-keyed mask from a black-background source PNG.
   | "texture_additive"
-  | "texture_luma_alpha";
+  | "texture_luma_alpha"
+  // Sprite-only: sample a built-in noise texture bound by the compiler (see cloudShaders.ts).
+  | "clouds"
+  | "impact_cloud";
 export type MeshShader = "pbr" | "magma" | "emissive";
 
 /**
@@ -48,6 +52,12 @@ export function buildSpriteColorNode(preset: SpriteShader): ColorNodeFn | undefi
   switch (preset) {
     case "hard":
       return undefined;
+
+    case "clouds":
+      return cloudsColorNode();
+
+    case "impact_cloud":
+      return impactCloudColorNode();
 
     case "texture_additive":
       return ({ uv, particle, textures }: ColorNodeContext) => {
