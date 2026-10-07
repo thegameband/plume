@@ -62,20 +62,32 @@
   let bloomEnabled = $state(true);
 
   // Motion: orbit the emitter around its spawn origin so trails and spread read as they
-  // would on a moving object. One lap of a 1 m radius every 3 s is roughly 2 m/s.
-  const MOTION_RADIUS = 1;
-  const MOTION_PERIOD = 3;
+  // would on a moving object. Speed is along the circle, in metres per second.
   let motionEnabled = $state(false);
+  let motionRadius = $state(1);
+  let motionSpeed = $state(2);
+
+  // InitPosition/InitFromMesh ignore the emitter transform unless World space is on.
+  const spawnsInWorldSpace = $derived(
+    graphStore.nodes.some(
+      (n) => (n.data.type === "init.position" || n.data.type === "init.from_mesh") && n.data.params.worldSpace === true,
+    ),
+  );
 
   function circleFollow(center: THREE.Vector3): FollowTarget {
-    const start = performance.now();
+    // Integrate the angle per call so radius/speed edits don't jump the emitter around the circle.
+    let angle = 0;
+    let last = performance.now();
     return {
       getPosition: (out) => {
-        const angle = ((performance.now() - start) / 1000) * ((2 * Math.PI) / MOTION_PERIOD);
+        const now = performance.now();
+        const radius = Math.max(0.01, motionRadius || 0);
+        angle += (((now - last) / 1000) * (motionSpeed || 0)) / radius;
+        last = now;
         return out.set(
-          center.x + Math.cos(angle) * MOTION_RADIUS,
+          center.x + Math.cos(angle) * radius,
           center.y,
-          center.z + Math.sin(angle) * MOTION_RADIUS,
+          center.z + Math.sin(angle) * radius,
         );
       },
     };
@@ -310,13 +322,7 @@
       return;
     }
 
-    const spawnsInWorldSpace = graphStore.nodes.some(
-      (n) => (n.data.type === "init.position" || n.data.type === "init.from_mesh") && n.data.params.worldSpace === true,
-    );
-    const motionHint = motionEnabled && !spawnsInWorldSpace
-      ? " · Motion has no effect until InitPosition has World space on"
-      : "";
-    editorStore.statusText = `${editorStore.live ? "Live (auto)" : "Live"} · ${result.summary}${motionHint}`;
+    editorStore.statusText = `${editorStore.live ? "Live (auto)" : "Live"} · ${result.summary}`;
   }
 
   function disposeGizmo(g: Gizmo): void {
@@ -469,15 +475,35 @@
 
 <div class="preview-wrap">
   <div class="preview-host" bind:this={host}></div>
-  <div class="preview-toggles">
-    <label class="preview-toggle">
-      <input type="checkbox" bind:checked={motionEnabled} />
-      Motion
-    </label>
-    <label class="preview-toggle">
-      <input type="checkbox" bind:checked={bloomEnabled} />
-      Bloom
-    </label>
+  <div class="preview-controls">
+    <div class="preview-toggles">
+      <label class="preview-toggle">
+        <input type="checkbox" bind:checked={motionEnabled} />
+        Motion
+      </label>
+      <label class="preview-toggle">
+        <input type="checkbox" bind:checked={bloomEnabled} />
+        Bloom
+      </label>
+    </div>
+    {#if motionEnabled}
+      <div class="motion-panel">
+        <label class="motion-field">
+          <span>Radius (m)</span>
+          <input type="number" min="0.1" step="0.1" bind:value={motionRadius} />
+        </label>
+        <label class="motion-field">
+          <span>Speed (m/s)</span>
+          <input type="number" min="0" step="0.5" bind:value={motionSpeed} />
+        </label>
+        {#if !spawnsInWorldSpace}
+          <p class="motion-note">
+            Turn on <strong>World space</strong> in InitPosition to see the motion. Without it,
+            particles ignore where the emitter is.
+          </p>
+        {/if}
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -492,12 +518,51 @@
     height: 100%;
     background: #0b0c10;
   }
-  .preview-toggles {
+  .preview-controls {
     position: absolute;
     top: 8px;
     right: 8px;
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
     gap: 6px;
+  }
+  .preview-toggles {
+    display: flex;
+    gap: 6px;
+  }
+  .motion-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 0;
+    min-width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: rgba(17, 19, 26, 0.8);
+    color: #c9ced8;
+    font-size: 12px;
+  }
+  .motion-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .motion-field input {
+    width: 64px;
+    padding: 2px 4px;
+    border: 1px solid #2a2c33;
+    border-radius: 3px;
+    background: #0e1116;
+    color: #e7e7e9;
+    font: inherit;
+  }
+  .motion-note {
+    margin: 0;
+    color: #f6c177;
+    line-height: 1.35;
   }
   .preview-toggle {
     display: flex;
