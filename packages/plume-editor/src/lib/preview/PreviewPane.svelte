@@ -198,6 +198,9 @@
     tick();
 
     ready = true;
+    // Live mode's first debounced rebuild usually fires while `renderer.init()` is still
+    // pending and gets dropped, so catch up once the preview exists.
+    if (editorStore.live) void rebuildAndSpawn();
   });
 
   function previewContext(): CompileContext {
