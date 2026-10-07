@@ -119,9 +119,11 @@
     stroke: #3a72ad;
     stroke-width: 1.5;
   }
-  :global(.svelte-flow__edge.selected .svelte-flow__edge-path) {
-    stroke: #9ae6b4;
-    stroke-width: 2;
+  /* !important: every edge carries an inline stroke style (see graphStore addEdge). */
+  :global(.svelte-flow .svelte-flow__edge.selected .svelte-flow__edge-path) {
+    stroke: #ffd84d !important;
+    stroke-width: 3 !important;
+    filter: drop-shadow(0 0 4px rgba(255, 216, 77, 0.8));
   }
   :global(.svelte-flow__connectionline) {
     stroke: #9ae6b4;
