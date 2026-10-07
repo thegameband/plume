@@ -7,7 +7,7 @@
   import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
-  import { Manager } from "three-plume";
+  import { Manager, type FollowTarget } from "three-plume";
 
   import { graphStore, updateNodeParam } from "../graph/graphStore.svelte.js";
   import { getSpec } from "../builder/nodes.js";
@@ -60,6 +60,26 @@
   let bloomOutput: Node | undefined;
   let plainOutput: Node | undefined;
   let bloomEnabled = $state(true);
+
+  // Motion: orbit the emitter around its spawn origin so trails and spread read as they
+  // would on a moving object. One lap of a 1 m radius every 3 s is roughly 2 m/s.
+  const MOTION_RADIUS = 1;
+  const MOTION_PERIOD = 3;
+  let motionEnabled = $state(false);
+
+  function circleFollow(center: THREE.Vector3): FollowTarget {
+    const start = performance.now();
+    return {
+      getPosition: (out) => {
+        const angle = ((performance.now() - start) / 1000) * ((2 * Math.PI) / MOTION_PERIOD);
+        return out.set(
+          center.x + Math.cos(angle) * MOTION_RADIUS,
+          center.y,
+          center.z + Math.sin(angle) * MOTION_RADIUS,
+        );
+      },
+    };
+  }
 
   // Off-screen depth target. `update.depth_collision` reads from this; the
   // ground plane + any opaque mesh particles render here once per frame.
@@ -279,7 +299,10 @@
       ? new THREE.Vector3(origin[0] as number, origin[1] as number, origin[2] as number)
       : new THREE.Vector3(0, 0.5, 0);
 
-    const sys = manager.spawn(id, { position: pos });
+    const sys = manager.spawn(id, {
+      position: pos,
+      follow: motionEnabled ? circleFollow(pos) : undefined,
+    });
     if (!sys) {
       manager.unregister(id);
       currentPreviewId = undefined;
@@ -287,7 +310,13 @@
       return;
     }
 
-    editorStore.statusText = `${editorStore.live ? "Live (auto)" : "Live"} · ${result.summary}`;
+    const spawnsInWorldSpace = graphStore.nodes.some(
+      (n) => (n.data.type === "init.position" || n.data.type === "init.from_mesh") && n.data.params.worldSpace === true,
+    );
+    const motionHint = motionEnabled && !spawnsInWorldSpace
+      ? " · Motion has no effect until InitPosition has World space on"
+      : "";
+    editorStore.statusText = `${editorStore.live ? "Live (auto)" : "Live"} · ${result.summary}${motionHint}`;
   }
 
   function disposeGizmo(g: Gizmo): void {
@@ -394,6 +423,17 @@
     postProcessing.needsUpdate = true;
   });
 
+  // Follow is fixed at spawn time, so toggling Motion respawns the effect.
+  let motionSeen = false;
+  $effect(() => {
+    motionEnabled;
+    if (!motionSeen) {
+      motionSeen = true;
+      return;
+    }
+    untrack(() => void rebuildAndSpawn());
+  });
+
   // Apply button — skip the initial 0 click.
   $effect(() => {
     if (applyTick === 0) return;
@@ -429,10 +469,16 @@
 
 <div class="preview-wrap">
   <div class="preview-host" bind:this={host}></div>
-  <label class="preview-toggle">
-    <input type="checkbox" bind:checked={bloomEnabled} />
-    Bloom
-  </label>
+  <div class="preview-toggles">
+    <label class="preview-toggle">
+      <input type="checkbox" bind:checked={motionEnabled} />
+      Motion
+    </label>
+    <label class="preview-toggle">
+      <input type="checkbox" bind:checked={bloomEnabled} />
+      Bloom
+    </label>
+  </div>
 </div>
 
 <style>
@@ -446,10 +492,14 @@
     height: 100%;
     background: #0b0c10;
   }
-  .preview-toggle {
+  .preview-toggles {
     position: absolute;
     top: 8px;
     right: 8px;
+    display: flex;
+    gap: 6px;
+  }
+  .preview-toggle {
     display: flex;
     align-items: center;
     gap: 6px;
