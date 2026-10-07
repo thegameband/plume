@@ -13,6 +13,7 @@ export interface ColorOverLifeParams {
 export class ColorOverLife implements ParticleUpdateModule {
   static readonly type = "update.color_over_life";
   readonly kind = "particle_update" as const;
+  readonly applyOnSpawn = true;
   readonly type = ColorOverLife.type;
   readonly id?: string;
   gradient: Gradient;

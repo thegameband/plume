@@ -13,6 +13,7 @@ export interface AlphaOverLifeParams {
 export class AlphaOverLife implements ParticleUpdateModule {
   static readonly type = "update.alpha_over_life";
   readonly kind = "particle_update" as const;
+  readonly applyOnSpawn = true;
   readonly type = AlphaOverLife.type;
   readonly id?: string;
   curve: Curve1D;

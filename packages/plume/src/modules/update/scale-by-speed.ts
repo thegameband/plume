@@ -27,6 +27,7 @@ export interface ScaleBySpeedParams {
 export class ScaleBySpeed implements ParticleUpdateModule {
   static readonly type = "update.scale_by_speed";
   readonly kind = "particle_update" as const;
+  readonly applyOnSpawn = true;
   readonly type = ScaleBySpeed.type;
   readonly id?: string;
   minSpeed: number;

@@ -79,6 +79,14 @@ export interface ParticleUpdateModule extends ModuleBase {
   readonly kind: "particle_update";
   contributeUpdateTSL(ctx: UpdateContext): void;
   /**
+   * Also run `contributeUpdateTSL` in the spawn kernel, right after the init modules. A
+   * particle spawned this frame is drawn before the update kernel ever sees it, so without
+   * this it renders one frame with its raw init values (e.g. full alpha before AlphaOverLife
+   * fades it in). Only set this on modules that are a pure function of the particle's state
+   * and age — anything that integrates `dt` would be applied twice.
+   */
+  readonly applyOnSpawn?: boolean;
+  /**
    * Optional per-frame hook fired by the Emitter before its update kernel dispatches.
    * Modules that need per-frame uniform updates (e.g. camera matrices for depth-buffer
    * collision) implement this to sync CPU state → GPU uniform. `camera` is the camera the

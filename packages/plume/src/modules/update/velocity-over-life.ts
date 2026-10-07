@@ -13,6 +13,7 @@ export interface VelocityOverLifeParams {
 export class VelocityOverLife implements ParticleUpdateModule {
   static readonly type = "update.velocity_over_life";
   readonly kind = "particle_update" as const;
+  readonly applyOnSpawn = true;
   readonly type = VelocityOverLife.type;
   readonly id?: string;
   curve: Curve1D;

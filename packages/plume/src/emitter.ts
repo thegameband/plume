@@ -495,6 +495,7 @@ export class Emitter {
     const eventSource = this._eventSource;
     const perTrigger = this._eventPerTrigger;
     const initModules = this.init;
+    const spawnUpdateModules = this.update.filter((m) => m.applyOnSpawn);
     const uniforms = {
       worldMatrix: this.uWorldMatrix,
       emitterTime: this.uEmitterTime,
@@ -528,6 +529,18 @@ export class Emitter {
           attr.initialColor.write(storage, slotI, attr.color.read(storage, slotI));
           attr.initialVelocity.write(storage, slotI, attr.velocity.read(storage, slotI));
           attr.initialSize.write(storage, slotI, attr.size.read(storage, slotI));
+          // Spawn runs after the update kernel, so this frame's newborns would otherwise be
+          // drawn with raw init values. Evaluate the age-only modules at age 0 so they render
+          // as they'll look on every later frame.
+          const updateCtx: UpdateContext = {
+            storage,
+            i: slotI,
+            dt: this.uDt,
+            emitterTime: uniforms.emitterTime,
+            intensity: uniforms.intensity,
+            worldMatrix: uniforms.worldMatrix,
+          };
+          for (const m of spawnUpdateModules) m.contributeUpdateTSL(updateCtx);
         };
 
         if (eventSource?.eventBuffer && eventSource.eventCounter) {

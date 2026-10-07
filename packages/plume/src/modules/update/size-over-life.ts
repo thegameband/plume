@@ -13,6 +13,7 @@ export interface SizeOverLifeParams {
 export class SizeOverLife implements ParticleUpdateModule {
   static readonly type = "update.size_over_life";
   readonly kind = "particle_update" as const;
+  readonly applyOnSpawn = true;
   readonly type = SizeOverLife.type;
   readonly id?: string;
   curve: Curve1D;
