@@ -2,7 +2,7 @@
  * Graph serialization + persistence.
  *
  * Round-trips the editor's current graph (nodes + edges) through JSON. Used for
- * `localStorage` autosave/restore and for the manual Save/Load buttons in the
+ * `localStorage` autosave/restore and for Save / Save As / Open / Import in the
  * header. Format is versioned so we can migrate later without trashing existing
  * user work.
  *
@@ -20,6 +20,8 @@ const FORMAT_VERSION = 1;
 
 export interface SerializedGraph {
   version: number;
+  /** Effect name; matches the file name (without `.json`) it was saved as. */
+  name?: string;
   nodes: Array<{
     id: string;
     type: string;
@@ -29,9 +31,10 @@ export interface SerializedGraph {
   edges: Array<{ id: string; source: string; target: string }>;
 }
 
-export function serialize(nodes: PlumeNode[], edges: Edge[]): SerializedGraph {
+export function serialize(nodes: PlumeNode[], edges: Edge[], name?: string): SerializedGraph {
   return {
     version: FORMAT_VERSION,
+    ...(name ? { name } : {}),
     nodes: nodes.map((n) => ({
       id: n.id,
       type: n.data.type,
@@ -44,7 +47,7 @@ export function serialize(nodes: PlumeNode[], edges: Edge[]): SerializedGraph {
 
 /** Parse and validate a saved graph. Throws on malformed input — the caller is
  *  expected to surface the message to the user. */
-export function deserialize(raw: unknown): { nodes: PlumeNode[]; edges: Edge[] } {
+export function deserialize(raw: unknown): { nodes: PlumeNode[]; edges: Edge[]; name?: string } {
   if (!raw || typeof raw !== "object") throw new Error("Not a graph file.");
   const obj = raw as Partial<SerializedGraph>;
   if (obj.version !== FORMAT_VERSION) {
@@ -96,7 +99,7 @@ export function deserialize(raw: unknown): { nodes: PlumeNode[]; edges: Edge[] }
     };
   });
 
-  return { nodes, edges };
+  return { nodes, edges, name: typeof obj.name === "string" ? obj.name : undefined };
 }
 
 // ─ localStorage helpers ────────────────────────────────────────────────────
@@ -128,25 +131,7 @@ export function clearStorage(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-// ─ File download / upload ──────────────────────────────────────────────────
-
-/** Trigger a download of the serialized graph as a JSON file. */
-export function downloadGraph(
-  nodes: PlumeNode[],
-  edges: Edge[],
-  filename = "plume-graph.json",
-): void {
-  const json = JSON.stringify(serialize(nodes, edges), null, 2);
-  const blob = new Blob([json], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
+// ─ File import ─────────────────────────────────────────────────────────────
 
 /** Open a file picker and resolve with the parsed graph. Resolves undefined if
  *  the user cancels. */

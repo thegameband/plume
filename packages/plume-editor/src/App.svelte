@@ -4,24 +4,43 @@
   import Inspector from "./lib/graph/Inspector.svelte";
   import PreviewPane from "./lib/preview/PreviewPane.svelte";
   import CodeExportModal from "./lib/CodeExportModal.svelte";
+  import FileDialog from "./lib/FileDialog.svelte";
   import { editorStore } from "./lib/state.svelte.js";
   import { graphStore, replaceGraph, resetToStarter } from "./lib/graph/graphStore.svelte.js";
-  import { downloadGraph, pickGraphFile } from "./lib/persistence.js";
+  import { deserialize, pickGraphFile, serialize } from "./lib/persistence.js";
+  import {
+    clearCurrentFile,
+    fileStore,
+    filePath,
+    setCurrentFile,
+    type EffectFile,
+  } from "./lib/file.svelte.js";
+  import { FileExistsError, loadJson, saveJson } from "./lib/fileApi.js";
   // Importing for the side effect: registers the global history snapshotter.
   import { undo, redo } from "./lib/graph/history.svelte.js";
   import { PRESETS } from "./lib/presets/gallery.js";
 
   let exportOpen = $state(false);
+  let fileDialogOpen = $state(false);
+  let fileDialogMode: "save" | "open" = $state("save");
 
   function loadPreset(idx: number): void {
     const preset = PRESETS[idx];
     if (!preset) return;
     const built = preset.build();
     replaceGraph(built.nodes, built.edges);
+    clearCurrentFile();
     editorStore.statusText = `Preset: ${preset.name} — ${preset.description}`;
   }
 
   function onKeydown(event: KeyboardEvent): void {
+    const mod = event.metaKey || event.ctrlKey;
+    if (mod && (event.key === "s" || event.key === "S")) {
+      event.preventDefault();
+      if (event.shiftKey) openSaveAs();
+      else void save();
+      return;
+    }
     // Don't intercept undo/redo while the user is typing into a field.
     const t = event.target as HTMLElement | null;
     if (
@@ -33,7 +52,6 @@
     ) {
       return;
     }
-    const mod = event.metaKey || event.ctrlKey;
     if (!mod) return;
     if (event.key === "z" || event.key === "Z") {
       event.preventDefault();
@@ -45,30 +63,74 @@
     }
   }
 
-  function applyGraph(): void {
-    editorStore.applyTick++;
-    editorStore.statusText = `Applying… (tick ${editorStore.applyTick})`;
+  function restartGraph(): void {
+    editorStore.restartTick++;
+    editorStore.statusText = "Restarting…";
   }
 
-  function saveGraph(): void {
-    downloadGraph(graphStore.nodes, graphStore.edges);
-    editorStore.statusText = "Graph downloaded as plume-graph.json";
+  /** Returns false if the file exists and the user chose not to overwrite it. */
+  async function writeFile(file: EffectFile, overwrite: boolean): Promise<boolean> {
+    const json = serialize(graphStore.nodes, graphStore.edges, file.name);
+    try {
+      await saveJson(filePath(file), json, overwrite);
+    } catch (err) {
+      if (!(err instanceof FileExistsError)) throw err;
+      if (!confirm(`${filePath(file)} already exists. Replace it?`)) return false;
+      await saveJson(filePath(file), json, true);
+    }
+    setCurrentFile(file);
+    editorStore.statusText = `Saved ${filePath(file)}`;
+    return true;
   }
 
-  async function loadGraph(): Promise<void> {
+  async function save(): Promise<void> {
+    const file = fileStore.current;
+    if (!file) {
+      openSaveAs();
+      return;
+    }
+    try {
+      await writeFile(file, true);
+    } catch (err) {
+      editorStore.statusText = `Save failed: ${err instanceof Error ? err.message : String(err)}`;
+    }
+  }
+
+  function openSaveAs(): void {
+    fileDialogMode = "save";
+    fileDialogOpen = true;
+  }
+
+  function openOpen(): void {
+    fileDialogMode = "open";
+    fileDialogOpen = true;
+  }
+
+  async function onFileDialogConfirm(file: EffectFile): Promise<boolean> {
+    if (fileDialogMode === "save") return writeFile(file, false);
+    const result = deserialize(await loadJson(filePath(file)));
+    replaceGraph(result.nodes, result.edges);
+    setCurrentFile(file);
+    editorStore.statusText = `Opened ${filePath(file)}`;
+    return true;
+  }
+
+  async function importGraph(): Promise<void> {
     try {
       const result = await pickGraphFile();
       if (!result) return;
       replaceGraph(result.nodes, result.edges);
-      editorStore.statusText = `Loaded ${result.nodes.length} nodes / ${result.edges.length} edges`;
+      clearCurrentFile();
+      editorStore.statusText = `Imported ${result.nodes.length} nodes / ${result.edges.length} edges — Save As to give it a location`;
     } catch (err) {
-      editorStore.statusText = `Load failed: ${err instanceof Error ? err.message : String(err)}`;
+      editorStore.statusText = `Import failed: ${err instanceof Error ? err.message : String(err)}`;
     }
   }
 
   function resetGraph(): void {
     if (!confirm("Reset to the starter graph? This clears the autosave.")) return;
     resetToStarter();
+    clearCurrentFile();
     editorStore.statusText = "Reset to starter graph.";
   }
 </script>
@@ -104,9 +166,11 @@
       onclick={() => (exportOpen = true)}
       title="Export the current graph as TypeScript code">Export</button
     >
-    <button class="ghost" onclick={loadGraph} title="Load graph from a JSON file">Load</button>
-    <button class="ghost" onclick={saveGraph} title="Download graph as JSON">Save</button>
-    <button onclick={applyGraph}>Apply</button>
+    <button class="ghost" onclick={openOpen} title="Open an effect file">Open</button>
+    <button class="ghost" onclick={importGraph} title="Import a JSON file from anywhere on this computer (opens untitled)">Import</button>
+    <button class="ghost" onclick={save} title="Save to the effect's current file (Ctrl+S)">Save</button>
+    <button class="ghost" onclick={openSaveAs} title="Save under a new name or location (Ctrl+Shift+S)">Save As</button>
+    <button onclick={restartGraph} title="Rebuild the effect and restart the preview">Restart</button>
   </header>
 
   <main>
@@ -120,11 +184,18 @@
       <Inspector />
     </section>
     <section class="preview">
-      <PreviewPane applyTick={editorStore.applyTick} />
+      <PreviewPane restartTick={editorStore.restartTick} />
     </section>
   </main>
 
   <CodeExportModal bind:open={exportOpen} />
+  <FileDialog
+    bind:open={fileDialogOpen}
+    mode={fileDialogMode}
+    startDir={fileStore.current?.dir ?? ""}
+    startName={fileDialogMode === "save" ? (fileStore.current?.name ?? "") : ""}
+    onconfirm={onFileDialogConfirm}
+  />
 </div>
 
 <style>

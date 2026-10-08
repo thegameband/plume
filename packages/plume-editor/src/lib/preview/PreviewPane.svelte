@@ -32,13 +32,13 @@
    * effects (`MeshRenderer` + `LightEmission`) actually land on something.
    *
    * Two trigger paths:
-   *   1. Header "Apply" button (`applyTick` increments).
+   *   1. Header "Restart" button (`restartTick` increments).
    *   2. Live mode — debounced auto-rebuild on any graph change.
    *
    * Loop: each compiled System is `loop()`-tagged so it keeps emitting once
    * spawned. We don't restart it ourselves.
    */
-  let { applyTick }: { applyTick: number } = $props();
+  let { restartTick }: { restartTick: number } = $props();
 
   let host: HTMLDivElement | undefined = $state();
   let renderer: WebGPURenderer | undefined;
@@ -257,11 +257,11 @@
 
   async function rebuildAndSpawn(): Promise<void> {
     if (!manager) {
-      editorStore.statusText = "Apply ignored — preview not initialized yet.";
+      editorStore.statusText = "Restart ignored — preview not initialized yet.";
       return;
     }
     if (!ready) {
-      editorStore.statusText = "Apply ignored — preview still warming up.";
+      editorStore.statusText = "Restart ignored — preview still warming up.";
       return;
     }
 
@@ -440,9 +440,9 @@
     untrack(() => void rebuildAndSpawn());
   });
 
-  // Apply button — skip the initial 0 click.
+  // Restart button — skip the initial 0 click.
   $effect(() => {
-    if (applyTick === 0) return;
+    if (restartTick === 0) return;
     void rebuildAndSpawn();
   });
 

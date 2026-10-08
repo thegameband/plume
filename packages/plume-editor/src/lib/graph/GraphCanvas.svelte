@@ -27,6 +27,17 @@
     removeEdge,
     removeNode,
   } from "./graphStore.svelte.js";
+  import { fileStore, filePath } from "../file.svelte.js";
+
+  const location = $derived.by(() => {
+    const file = fileStore.current;
+    if (!file) return "not saved yet";
+    const rootName = fileStore.root?.rootName;
+    return [rootName, file.dir].filter(Boolean).join("/") + "/";
+  });
+  const fullPath = $derived(
+    fileStore.current && fileStore.root ? `${fileStore.root.root}/${filePath(fileStore.current)}` : undefined,
+  );
 
   // xyflow's `NodeTypes` map embeds `any` in its component-prop generics — that's their
   // public surface, not ours. Cast through `unknown` so we don't propagate the `any`
@@ -102,12 +113,45 @@
     <Background />
     <Controls />
   </SvelteFlow>
+  <div class="file-label" title={fullPath}>
+    <div class="file-name">
+      {fileStore.current?.name ?? "Untitled"}{#if fileStore.dirty}<span class="dirty" title="Unsaved changes"> ●</span>{/if}
+    </div>
+    <div class="file-dir">{location}</div>
+  </div>
 </div>
 
 <style>
   .graph-canvas {
+    position: relative;
     width: 100%;
     height: 100%;
+  }
+  .file-label {
+    position: absolute;
+    top: 8px;
+    left: 10px;
+    z-index: 5;
+    max-width: calc(100% - 20px);
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: rgba(17, 19, 26, 0.85);
+    border: 1px solid #2a2c33;
+  }
+  .file-name {
+    color: #e7e7e9;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .dirty {
+    color: #f6c177;
+  }
+  .file-dir {
+    color: #8a909c;
+    font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   :global(.svelte-flow) {
     background-color: #0e1116;
