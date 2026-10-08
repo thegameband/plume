@@ -8,7 +8,9 @@
  * the top of the screen, and cut out with a hard alpha threshold.
  *
  * Particle alpha is the material's "Opacity Control" — drive it with AlphaOverLife to grow
- * and dissolve the cloud. Particle RGB multiplies the shaded colour, so ColorOverLife tints.
+ * and dissolve the cloud. For `impact_cloud` it also opens the cutout: alpha 0 is the
+ * material's near-invisible rest state, alpha 1 its keyframed impact dip, so pulse the alpha
+ * curve to flash it. Particle RGB multiplies the shaded colour, so ColorOverLife tints.
  * Use alpha blending.
  */
 
@@ -27,7 +29,12 @@ const SHADOW_COLOR = vec3(0.7423, 0.8577, 1.0);
 const LIGHT_COLOR = vec3(1, 1, 1);
 const SHADOW_TO_LIGHT_AT = 0.082;
 const CLOUDS_CUTOUT = 0.05;
-const IMPACT_CUTOUT = 0.3;
+/**
+ * ImpactCloud's cutout threshold was keyframed between these: at rest almost nothing of the
+ * ring clears it, and the impact shows only while it dips. Particle alpha drives it here.
+ */
+const IMPACT_CUTOUT_REST = 0.3;
+const IMPACT_CUTOUT_OPEN = 0.2;
 
 type Float = Node<"float">;
 type Vec2 = Node<"vec2">;
@@ -51,8 +58,10 @@ export function impactCloudColorNode(): ColorNodeFn {
     const ring = g.mul(float(1).sub(g));
     const rim = pow(max(pow(ring, 2.5).div(0.5).clamp(0, 1), 1e-6), 0.6).clamp(0, 1);
     const body = screenBlend(ring.mul(noise), rim);
-    const density = ctx.particle.color.a.mul(body).clamp(0, 1);
-    return shadeCloud(ctx, density, step(IMPACT_CUTOUT, body));
+    const alpha = ctx.particle.color.a;
+    const density = alpha.mul(body).clamp(0, 1);
+    const threshold = mix(float(IMPACT_CUTOUT_REST), float(IMPACT_CUTOUT_OPEN), alpha.clamp(0, 1));
+    return shadeCloud(ctx, density, step(threshold, body));
   };
 }
 
