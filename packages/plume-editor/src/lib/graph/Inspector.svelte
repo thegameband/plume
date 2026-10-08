@@ -63,6 +63,20 @@
     const v = node?.data.params[field.key];
     return typeof v === "string" ? v : fallback;
   }
+  /** A field with `showWhen` appears only while its controlling select holds one of the values. */
+  function isVisible(field: Field): boolean {
+    if (!field.showWhen || !spec) return true;
+    const { key, oneOf } = field.showWhen;
+    const controller = spec.fields.find((f) => f.key === key);
+    const current = node?.data.params[key];
+    const value =
+      typeof current === "string"
+        ? current
+        : controller?.kind === "select"
+          ? (controller.options[0] ?? "")
+          : "";
+    return oneOf.includes(value);
+  }
   function readShape(fallback: EmissionShape): EmissionShape {
     const v = node?.data.params["shape"];
     if (v && typeof v === "object" && !Array.isArray(v) && "kind" in v) return v as EmissionShape;
@@ -216,7 +230,7 @@
       <p class="empty">No parameters.</p>
     {:else}
       <div class="fields">
-        {#each spec.fields as field (field.key)}
+        {#each spec.fields.filter((f) => isVisible(f)) as field (field.key)}
           <label>
             <span class="key">{field.label}</span>
 

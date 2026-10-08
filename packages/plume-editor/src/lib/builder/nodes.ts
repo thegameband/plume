@@ -92,7 +92,13 @@ export interface EmitterRef {
   nodeId: string | undefined;
 }
 
-export type Field =
+/** Show a field in the inspector only while another select field has one of these values. */
+export interface FieldVisibility {
+  showWhen?: { key: string; oneOf: string[] };
+}
+
+export type Field = FieldVisibility &
+  (
   | { kind: "number"; key: string; label: string; min?: number; max?: number; step?: number }
   | { kind: "range"; key: string; label: string; min?: number; max?: number; step?: number }
   | { kind: "vec3"; key: string; label: string; step?: number }
@@ -105,7 +111,8 @@ export type Field =
   | { kind: "geometry"; key: string; label: string }
   | { kind: "sdf"; key: string; label: string }
   | { kind: "emitter-ref"; key: string; label: string }
-  | { kind: "boolean"; key: string; label: string };
+  | { kind: "boolean"; key: string; label: string }
+  );
 
 /**
  * Parameter values stored on a graph node. Curve + gradient values carry a `kind`
@@ -690,10 +697,32 @@ export const NODE_SPECS: NodeSpec[] = [
         label: "Blending",
         options: ["additive", "alpha", "normal"],
       },
+      {
+        kind: "select",
+        key: "orientation",
+        label: "Orientation",
+        options: ["camera", "upright", "ground", "wall"],
+      },
+      {
+        kind: "number",
+        key: "facingAngle",
+        label: "Facing angle (deg about Y)",
+        min: -360,
+        max: 360,
+        step: 5,
+        showWhen: { key: "orientation", oneOf: ["wall"] },
+      },
       { kind: "number", key: "opacity", label: "Opacity", min: 0, max: 1, step: 0.01 },
       { kind: "number", key: "renderOrder", label: "Render order", min: -100, max: 100, step: 1 },
     ],
-    defaults: { shader: "soft", blending: "additive", opacity: 1, renderOrder: 0 },
+    defaults: {
+      shader: "soft",
+      blending: "additive",
+      orientation: "camera",
+      facingAngle: 0,
+      opacity: 1,
+      renderOrder: 0,
+    },
   },
   {
     type: "render.ribbon",

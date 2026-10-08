@@ -5,8 +5,11 @@ import {
   Fn,
   cameraProjectionMatrix,
   cos,
+  cross,
   float,
   instanceIndex,
+  length,
+  max,
   modelViewMatrix,
   positionLocal,
   sin,
@@ -37,6 +40,17 @@ import { registerModule } from "../registry.js";
 const SLOT_MASK = (1 << 10) - 1;
 
 export type SpriteBlendMode = "additive" | "alpha" | "normal";
+
+/**
+ * How a sprite's quad is oriented. Axes for `ground` / `wall` / `upright` are the effect's
+ * own space (Y up), so a rotated or scaled system carries its sprites with it.
+ * - `"camera"` (default): always faces the camera. `rotation` spins it on screen.
+ * - `"upright"`: faces the camera but stays vertical, turning only about Y. `rotation` is
+ *   ignored, since spinning it would tip it over.
+ * - `"ground"`: flat, facing +Y. `rotation` spins it about Y.
+ * - `"wall"`: vertical, facing `facingAngle`. `rotation` spins it in its own plane.
+ */
+export type SpriteOrientation = "camera" | "upright" | "ground" | "wall";
 
 /**
  * Sprite-sheet animation config. The provided texture is treated as a `cols × rows` grid of
@@ -86,6 +100,13 @@ export interface SpriteRendererParams {
   textureRef?: string;
   /** Optional sprite-sheet animation. When set, the named texture is treated as a frame grid. */
   animation?: SpriteAnimationParams;
+  /** Quad orientation. Default `"camera"`. See {@link SpriteOrientation}. */
+  orientation?: SpriteOrientation;
+  /**
+   * Degrees about Y that a `"wall"` sprite faces. 0 faces +Z, 90 faces +X. Ignored by the
+   * other orientations. Default 0.
+   */
+  facingAngle?: number;
 }
 
 /**
@@ -110,6 +131,8 @@ export class SpriteRenderer implements RenderModule {
   renderOrder: number;
   textureRef?: string;
   animation?: SpriteAnimationParams;
+  orientation: SpriteOrientation;
+  facingAngle: number;
 
   readonly object3D: THREE.Group;
 
@@ -130,6 +153,8 @@ export class SpriteRenderer implements RenderModule {
     this.id = params.id;
     this.textureRef = params.textureRef;
     this.animation = params.animation;
+    this.orientation = params.orientation ?? "camera";
+    this.facingAngle = params.facingAngle ?? 0;
     this._colorNode = params.colorNode;
 
     // Resolve the texture map. `textures` wins; `texture` is the legacy single-input shorthand;
@@ -158,8 +183,13 @@ export class SpriteRenderer implements RenderModule {
     geom.setAttribute("uv", new THREE.BufferAttribute(quadUv, 2));
     geom.setIndex([0, 1, 2, 0, 2, 3]);
 
+    const orientation = this.orientation;
+    const facingRad = (this.facingAngle * Math.PI) / 180;
+
     const material = new MeshBasicNodeMaterial({
       transparent: true,
+      // Flat and wall quads are seen from both sides; camera-facing ones never are.
+      side: orientation === "camera" ? THREE.FrontSide : THREE.DoubleSide,
       depthWrite: this.depthWrite,
       depthTest: this.depthTest,
       blending: this._resolveBlending(),
@@ -194,9 +224,45 @@ export class SpriteRenderer implements RenderModule {
       const s = sin(rotation);
       const effectiveScale = scale.mul(aliveFlag);
       const scaled = positionLocal.xy.mul(effectiveScale);
-      const offsetX = scaled.x.mul(c).sub(scaled.y.mul(s));
-      const offsetY = scaled.x.mul(s).add(scaled.y.mul(c));
-      const mvFinal = mvCenter.add(vec4(offsetX, offsetY, 0, 0));
+
+      if (orientation === "camera") {
+        const offsetX = scaled.x.mul(c).sub(scaled.y.mul(s));
+        const offsetY = scaled.x.mul(s).add(scaled.y.mul(c));
+        const mvFinal = mvCenter.add(vec4(offsetX, offsetY, 0, 0));
+        return cameraProjectionMatrix.mul(mvFinal);
+      }
+
+      // Oriented quads: place the corners along two view-space axes. Effect-space directions
+      // go through the model-view matrix and are re-normalised, so system scale doesn't
+      // resize the sprite (matching camera mode).
+      const viewDir = (x: number, y: number, z: number) =>
+        modelViewMatrix.mul(vec4(x, y, z, 0)).xyz.normalize();
+      let axisX: Node<"vec3">;
+      let axisY: Node<"vec3">;
+      let offsetX: Node<"float">;
+      let offsetY: Node<"float">;
+      if (orientation === "upright") {
+        const up = viewDir(0, 1, 0);
+        const toCamera = mvCenter.xyz.normalize().negate();
+        const right = cross(up, toCamera);
+        // Camera directly above or below the sprite leaves no horizontal direction to turn
+        // towards; the clamp collapses the quad rather than producing NaN.
+        axisX = right.div(max(length(right), 1e-5));
+        axisY = up;
+        offsetX = scaled.x;
+        offsetY = scaled.y;
+      } else {
+        if (orientation === "ground") {
+          axisX = viewDir(1, 0, 0);
+          axisY = viewDir(0, 0, -1);
+        } else {
+          axisX = viewDir(Math.cos(facingRad), 0, -Math.sin(facingRad));
+          axisY = viewDir(0, 1, 0);
+        }
+        offsetX = scaled.x.mul(c).sub(scaled.y.mul(s));
+        offsetY = scaled.x.mul(s).add(scaled.y.mul(c));
+      }
+      const mvFinal = mvCenter.add(vec4(axisX.mul(offsetX).add(axisY.mul(offsetY)), 0));
       return cameraProjectionMatrix.mul(mvFinal);
     })();
 
@@ -329,6 +395,8 @@ export class SpriteRenderer implements RenderModule {
       renderOrder: this.renderOrder,
       textureRef: this.textureRef,
       animation: this.animation,
+      orientation: this.orientation,
+      facingAngle: this.facingAngle,
       // `textures` and `colorNode` are not serializable — caller must re-supply on fromJSON.
     };
   }
@@ -342,6 +410,8 @@ export class SpriteRenderer implements RenderModule {
       renderOrder: data["renderOrder"] as number | undefined,
       textureRef: data["textureRef"] as string | undefined,
       animation: data["animation"] as SpriteAnimationParams | undefined,
+      orientation: data["orientation"] as SpriteOrientation | undefined,
+      facingAngle: data["facingAngle"] as number | undefined,
       id: data.id,
     });
   }

@@ -126,6 +126,7 @@ export { SpriteRenderer } from "./modules/render/sprite-renderer.js";
 export type {
   SpriteAnimationParams,
   SpriteBlendMode,
+  SpriteOrientation,
   SpriteRendererParams,
 } from "./modules/render/sprite-renderer.js";
 export { MeshRenderer } from "./modules/render/mesh-renderer.js";

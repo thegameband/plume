@@ -247,7 +247,12 @@ function emitOne(node: GraphNode, indent: string = "      "): string {
     // ── Render ──
     case "render.sprite": {
       const tex = textureRef(p, "texture");
-      return `${shaderComment(p, ind)}${ind}.renderSprite({ ${tex ? `textures: { base: ${tex} }, ` : ""}blending: ${JSON.stringify(sel(p, "blending", "additive"))}, opacity: ${num(p, "opacity", 1)}, renderOrder: ${num(p, "renderOrder", 0)} })`;
+      const orientation = sel(p, "orientation", "camera");
+      const orientationArgs =
+        orientation === "camera"
+          ? ""
+          : `orientation: ${JSON.stringify(orientation)}, ${orientation === "wall" ? `facingAngle: ${num(p, "facingAngle", 0)}, ` : ""}`;
+      return `${shaderComment(p, ind)}${ind}.renderSprite({ ${tex ? `textures: { base: ${tex} }, ` : ""}blending: ${JSON.stringify(sel(p, "blending", "additive"))}, ${orientationArgs}opacity: ${num(p, "opacity", 1)}, renderOrder: ${num(p, "renderOrder", 0)} })`;
     }
     case "render.ribbon": {
       const tex = textureRef(p, "texture");

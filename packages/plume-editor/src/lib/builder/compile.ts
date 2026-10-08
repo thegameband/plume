@@ -501,6 +501,12 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
           | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
+        orientation: readSelect(p, "orientation", ["camera", "upright", "ground", "wall"], "camera") as
+          | "camera"
+          | "upright"
+          | "ground"
+          | "wall",
+        facingAngle: readNumber(p, "facingAngle", 0),
         ...(textures ? { textures } : {}),
         ...(colorNode ? { colorNode } : {}),
       });
