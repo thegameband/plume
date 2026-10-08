@@ -161,7 +161,7 @@ function emitOne(node: GraphNode, indent: string = "      "): string {
       return `${ind}.lifetime({ min: ${a}, max: ${b} })`;
     }
     case "init.position":
-      return `${ind}.position({ shape: ${shape(p, "shape")}, worldSpace: ${bool(p, "worldSpace", false)} })`;
+      return `${ind}.position({ shape: ${shape(p, "shape")}, offset: [${vec3(p, "offset", [0, 0, 0])}], worldSpace: ${bool(p, "worldSpace", false)} })`;
     case "init.velocity": {
       const [a, b] = range(p, "speed", [1, 3]);
       return `${ind}.velocity({ shape: ${shape(p, "shape")}, speed: { min: ${a}, max: ${b} }, worldSpace: ${bool(p, "worldSpace", false)} })`;
@@ -252,7 +252,7 @@ function emitOne(node: GraphNode, indent: string = "      "): string {
         orientation === "camera"
           ? ""
           : `orientation: ${JSON.stringify(orientation)}, ${orientation === "wall" ? `facingAngle: ${num(p, "facingAngle", 0)}, ` : ""}`;
-      return `${shaderComment(p, ind)}${ind}.renderSprite({ ${tex ? `textures: { base: ${tex} }, ` : ""}blending: ${JSON.stringify(sel(p, "blending", "additive"))}, ${orientationArgs}opacity: ${num(p, "opacity", 1)}, renderOrder: ${num(p, "renderOrder", 0)} })`;
+      return `${shaderComment(p, ind)}${ind}.renderSprite({ ${tex ? `textures: { base: ${tex} }, ` : ""}blending: ${JSON.stringify(sel(p, "blending", "additive"))}, ${orientationArgs}opacity: ${num(p, "opacity", 1)}, depthTest: ${bool(p, "depthTest", true)}, depthWrite: ${bool(p, "depthWrite", false)}, renderOrder: ${num(p, "renderOrder", 0)} })`;
     }
     case "render.ribbon": {
       const tex = textureRef(p, "texture");

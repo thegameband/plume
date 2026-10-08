@@ -253,6 +253,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
     case "init.position":
       e.position({
         shape: readShape(p, "shape", { kind: "sphere", radius: 0.3, thickness: 1 }),
+        offset: readVec3(p, "offset", [0, 0, 0]),
         worldSpace: readBool(p, "worldSpace", false),
       });
       break;
@@ -507,6 +508,8 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
           | "ground"
           | "wall",
         facingAngle: readNumber(p, "facingAngle", 0),
+        depthTest: readBool(p, "depthTest", true),
+        depthWrite: readBool(p, "depthWrite", false),
         ...(textures ? { textures } : {}),
         ...(colorNode ? { colorNode } : {}),
       });

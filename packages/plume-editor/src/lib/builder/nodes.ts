@@ -276,10 +276,12 @@ export const NODE_SPECS: NodeSpec[] = [
     accent: CAT_COLORS.init,
     fields: [
       { kind: "shape", key: "shape", label: "Shape" },
+      { kind: "vec3", key: "offset", label: "Offset (X, Y, Z)", step: 0.01 },
       { kind: "boolean", key: "worldSpace", label: "World space" },
     ],
     defaults: {
       shape: { kind: "sphere", radius: 0.3, thickness: 1 } as EmissionShape,
+      offset: [0, 0, 0],
       worldSpace: false,
     },
   },
@@ -713,6 +715,8 @@ export const NODE_SPECS: NodeSpec[] = [
         showWhen: { key: "orientation", oneOf: ["wall"] },
       },
       { kind: "number", key: "opacity", label: "Opacity", min: 0, max: 1, step: 0.01 },
+      { kind: "boolean", key: "depthTest", label: "Depth test" },
+      { kind: "boolean", key: "depthWrite", label: "Depth write" },
       { kind: "number", key: "renderOrder", label: "Render order", min: -100, max: 100, step: 1 },
     ],
     defaults: {
@@ -721,6 +725,8 @@ export const NODE_SPECS: NodeSpec[] = [
       orientation: "camera",
       facingAngle: 0,
       opacity: 1,
+      depthTest: true,
+      depthWrite: false,
       renderOrder: 0,
     },
   },

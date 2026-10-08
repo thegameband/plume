@@ -263,7 +263,11 @@ export class EmitterBuilder {
     this._init.push(new InitLifetime({ lifetime: toScalarInput(input) }));
     return this;
   }
-  position(params: { shape: EmissionShape; worldSpace?: boolean }): this {
+  position(params: {
+    shape: EmissionShape;
+    worldSpace?: boolean;
+    offset?: [number, number, number];
+  }): this {
     this._init.push(new InitPosition(params));
     return this;
   }

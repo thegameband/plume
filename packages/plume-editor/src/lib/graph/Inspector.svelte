@@ -487,7 +487,7 @@
             {:else if field.kind === "boolean"}
               <input
                 type="checkbox"
-                checked={node.data.params[field.key] === true}
+                checked={(node.data.params[field.key] ?? spec.defaults[field.key]) === true}
                 onchange={(e) => set(field.key, (e.currentTarget as HTMLInputElement).checked)}
               />
             {/if}
