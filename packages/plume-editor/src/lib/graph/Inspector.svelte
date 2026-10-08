@@ -594,6 +594,13 @@
     display: grid;
     gap: 4px;
   }
+  /* Grid items default to min-width:auto, so number inputs (with their spinners) keep their
+     intrinsic width and push later columns out of the panel. Let them shrink to their column. */
+  .row > input {
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
   .row.two {
     grid-template-columns: 1fr 1fr;
   }
