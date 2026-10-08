@@ -483,13 +483,14 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       // always get both inputs. Other presets fall back to procedural shaping when no
       // texture was uploaded; if a texture IS uploaded with a procedural shader, the
       // texture wins and the renderer's default (sample × particle.color) is used.
-      // Cloud shaders bring their own noise texture and ignore any upload.
+      // Cloud shaders use the uploaded texture as their noise (red channel), falling back
+      // to the bundled Voronoi noise when the slot is empty.
       const isTextureShader = shader === "texture_additive" || shader === "texture_luma_alpha";
       const isCloudShader = shader === "clouds" || shader === "impact_cloud";
       const colorNode =
         isTextureShader || isCloudShader || !tex ? buildSpriteColorNode(shader) : undefined;
       const textures: Record<string, THREE.Texture> | undefined = isCloudShader
-        ? { [CLOUD_NOISE_TEXTURE_KEY]: getCloudNoiseTexture() }
+        ? { [CLOUD_NOISE_TEXTURE_KEY]: tex ?? getCloudNoiseTexture() }
         : tex
           ? { base: tex }
           : undefined;

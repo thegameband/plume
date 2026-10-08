@@ -406,7 +406,8 @@ function shaderComment(p: Params, indent: string): string {
   if (!shader || shader === "soft") return "";
   if (shader === "clouds" || shader === "impact_cloud") {
     const fn = shader === "clouds" ? "cloudsColorNode" : "impactCloudColorNode";
-    return `${indent}/* Editor shader preset "${shader}": in RailWords use { textures: { [CLOUD_NOISE_TEXTURE_KEY]: getCloudNoiseTexture() }, colorNode: ${fn}() } from src/Vfx/shaders/cloudShaders.ts. */\n`;
+    const noise = textureRef(p, "texture") ? "<your sprite texture>" : "getCloudNoiseTexture()";
+    return `${indent}/* Editor shader preset "${shader}": in RailWords use { textures: { [CLOUD_NOISE_TEXTURE_KEY]: ${noise} }, colorNode: ${fn}() } from src/Vfx/shaders/cloudShaders.ts. */\n`;
   }
   return `${indent}/* Editor shader preset "${shader}" uses a colorNode; add one here to exactly match the preview. */\n`;
 }
