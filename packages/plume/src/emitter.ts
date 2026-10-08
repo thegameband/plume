@@ -251,6 +251,21 @@ export class Emitter {
     this.render.setFollowPosition?.(position, hasFollow);
   }
 
+  /**
+   * Number of live particles, read back from the GPU. Async with a frame or two of latency
+   * and a copy of up to `capacity * 16` bytes, so poll it a few times a second (debug HUDs,
+   * editors) rather than every frame.
+   */
+  async countAlive(renderer: WebGPURenderer): Promise<number> {
+    const slots = this._aliveHighWater;
+    if (slots === 0) return 0;
+    const buf = await renderer.getArrayBufferAsync(this.buffer.storage.posAlive.value, null, 0, slots * 16);
+    const posAlive = new Float32Array(buf);
+    let count = 0;
+    for (let i = 3; i < posAlive.length; i += 4) if (posAlive[i]! >= 0.5) count++;
+    return count;
+  }
+
   play(): void {
     this._emitterTime = 0;
     this._playing = true;

@@ -21,6 +21,39 @@
   import { PRESETS } from "./lib/presets/gallery.js";
 
   let exportOpen = $state(false);
+
+  // Preview column width, dragged from its left border; double-click resets.
+  const PREVIEW_WIDTH_KEY = "plume-editor:preview-width";
+  const DEFAULT_PREVIEW_WIDTH = 480;
+  const MIN_PREVIEW_WIDTH = 240;
+  // Palette (200) + inspector (280) + a usable graph (300).
+  const OTHER_COLUMNS_MIN = 780;
+  let previewWidth = $state(clampPreviewWidth(Number(localStorage.getItem(PREVIEW_WIDTH_KEY)) || DEFAULT_PREVIEW_WIDTH));
+  let resizingPreview = $state(false);
+
+  function clampPreviewWidth(w: number): number {
+    return Math.round(Math.max(MIN_PREVIEW_WIDTH, Math.min(w, window.innerWidth - OTHER_COLUMNS_MIN)));
+  }
+
+  function setPreviewWidth(w: number): void {
+    previewWidth = clampPreviewWidth(w);
+    localStorage.setItem(PREVIEW_WIDTH_KEY, String(previewWidth));
+  }
+
+  function onResizerDown(event: PointerEvent): void {
+    event.preventDefault();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    resizingPreview = true;
+  }
+
+  function onResizerMove(event: PointerEvent): void {
+    if (resizingPreview) setPreviewWidth(window.innerWidth - event.clientX);
+  }
+
+  function onResizerUp(event: PointerEvent): void {
+    (event.currentTarget as HTMLElement).releasePointerCapture(event.pointerId);
+    resizingPreview = false;
+  }
   let fileDialogOpen = $state(false);
   let fileDialogMode: "save" | "open" = $state("save");
 
@@ -135,7 +168,7 @@
   }
 </script>
 
-<svelte:window onkeydown={onKeydown} />
+<svelte:window onkeydown={onKeydown} onresize={() => (previewWidth = clampPreviewWidth(previewWidth))} />
 
 <div class="app">
   <header>
@@ -173,7 +206,7 @@
     <button onclick={restartGraph} title="Rebuild the effect and restart the preview">Restart</button>
   </header>
 
-  <main>
+  <main class:resizing={resizingPreview} style:grid-template-columns="200px 1fr 280px {previewWidth}px">
     <section class="palette">
       <Palette />
     </section>
@@ -185,6 +218,18 @@
     </section>
     <section class="preview">
       <PreviewPane restartTick={editorStore.restartTick} />
+      <div
+        class="preview-resizer"
+        class:active={resizingPreview}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize preview"
+        title="Drag to resize the preview (double-click to reset)"
+        onpointerdown={onResizerDown}
+        onpointermove={onResizerMove}
+        onpointerup={onResizerUp}
+        ondblclick={() => setPreviewWidth(DEFAULT_PREVIEW_WIDTH)}
+      ></div>
     </section>
   </main>
 
@@ -273,8 +318,27 @@
   }
   main {
     display: grid;
-    grid-template-columns: 200px 1fr 280px 480px;
     overflow: hidden;
+  }
+  main.resizing {
+    cursor: col-resize;
+    user-select: none;
+  }
+  .preview-resizer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 6px;
+    z-index: 10;
+    cursor: col-resize;
+    border-left: 1px solid #2a2c33;
+    touch-action: none;
+  }
+  .preview-resizer:hover,
+  .preview-resizer.active {
+    border-left: 2px solid #3a72ad;
+    background: rgba(58, 114, 173, 0.15);
   }
   .palette,
   .graph,

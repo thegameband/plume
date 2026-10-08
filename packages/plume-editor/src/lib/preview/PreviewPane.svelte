@@ -7,7 +7,7 @@
   import { bloom } from "three/examples/jsm/tsl/display/BloomNode.js";
   import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
   import { TransformControls } from "three/examples/jsm/controls/TransformControls.js";
-  import { Manager, type FollowTarget } from "three-plume";
+  import { Manager, type FollowTarget, type System } from "three-plume";
 
   import { graphStore, updateNodeParam } from "../graph/graphStore.svelte.js";
   import { getSpec } from "../builder/nodes.js";
@@ -48,7 +48,30 @@
   let manager: Manager | undefined;
   let timer: Timer | undefined;
   let rafId: number | undefined;
-  let onResize: (() => void) | undefined;
+  let resizeObserver: ResizeObserver | undefined;
+
+  // Live particle count, read back from the GPU a few times a second.
+  let currentSystem: System | undefined;
+  let particleCount: number | undefined = $state(undefined);
+  let countTimer: ReturnType<typeof setInterval> | undefined;
+  let countPending = false;
+
+  function pollParticleCount(): void {
+    if (countPending || !renderer) return;
+    const sys = currentSystem;
+    if (!sys) {
+      particleCount = undefined;
+      return;
+    }
+    countPending = true;
+    sys
+      .countAlive(renderer)
+      .then((n) => {
+        if (sys === currentSystem) particleCount = n;
+      })
+      .catch(() => {})
+      .finally(() => (countPending = false));
+  }
   let registeredCount = 0;
   let currentPreviewId: string | undefined;
   let ready = false;
@@ -197,16 +220,19 @@
 
     // Depth scene mirrors the ground plane — built lazily the first time a
     // graph compile asks for depth_collision (see ensureDepthPass).
-    onResize = (): void => {
+    // Observe the host rather than the window: the preview column is user-resizable.
+    resizeObserver = new ResizeObserver(() => {
       if (!renderer || !camera || !host) return;
       const w = host.clientWidth;
       const h = host.clientHeight;
+      if (w === 0 || h === 0) return;
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       depthTarget?.setSize(w, h);
-    };
-    window.addEventListener("resize", onResize);
+    });
+    resizeObserver.observe(host);
+    countTimer = setInterval(pollParticleCount, 250);
 
     function tick(): void {
       if (!renderer || !scene || !camera || !timer || !manager || !controls || !postProcessing) return;
@@ -296,6 +322,7 @@
     }
 
     manager.clear();
+    currentSystem = undefined;
     if (previousId) manager.unregister(previousId);
     currentPreviewId = id;
 
@@ -321,6 +348,7 @@
       editorStore.statusText = `Spawn returned null (at capacity?) — ${result.summary}`;
       return;
     }
+    currentSystem = sys;
 
     editorStore.statusText = `${editorStore.live ? "Live (auto)" : "Live"} · ${result.summary}`;
   }
@@ -463,7 +491,8 @@
 
   onDestroy(() => {
     if (rafId !== undefined) cancelAnimationFrame(rafId);
-    if (onResize) window.removeEventListener("resize", onResize);
+    resizeObserver?.disconnect();
+    if (countTimer !== undefined) clearInterval(countTimer);
     if (liveDebounceTimer !== undefined) clearTimeout(liveDebounceTimer);
     for (const g of gizmos.values()) disposeGizmo(g);
     gizmos.clear();
@@ -475,6 +504,9 @@
 
 <div class="preview-wrap">
   <div class="preview-host" bind:this={host}></div>
+  <div class="particle-count">
+    {particleCount === undefined ? "—" : particleCount.toLocaleString()} particles
+  </div>
   <div class="preview-controls">
     <div class="preview-toggles">
       <label class="preview-toggle">
@@ -517,6 +549,18 @@
     width: 100%;
     height: 100%;
     background: #0b0c10;
+  }
+  .particle-count {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(17, 19, 26, 0.8);
+    color: #c9ced8;
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    pointer-events: none;
+    user-select: none;
   }
   .preview-controls {
     position: absolute;

@@ -91,6 +91,12 @@ export class System {
     for (const em of this.emitters) em.setFollowPosition(position, hasFollow);
   }
 
+  /** Live particles across all emitters. See {@link Emitter.countAlive} for cost. */
+  async countAlive(renderer: WebGPURenderer): Promise<number> {
+    const counts = await Promise.all(this.emitters.map((em) => em.countAlive(renderer)));
+    return counts.reduce((a, b) => a + b, 0);
+  }
+
   /**
    * Update all emitters. Renderer is passed through for GPU compute dispatch.
    *
