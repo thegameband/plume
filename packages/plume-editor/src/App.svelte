@@ -253,7 +253,7 @@
   <FileDialog
     bind:open={fileDialogOpen}
     mode={fileDialogMode}
-    startDir={fileStore.current?.dir ?? ""}
+    startDir={fileStore.current?.dir ?? fileStore.lastDir}
     startName={fileDialogMode === "save" ? (fileStore.current?.name ?? "") : ""}
     onconfirm={onFileDialogConfirm}
   />
