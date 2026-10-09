@@ -57,6 +57,11 @@ export interface GraphEdge {
 export interface CompileContext {
   depthTexture?: THREE.Texture;
   camera?: THREE.Camera;
+  /**
+   * Preview only this emitter's chain (plus any emitter it spawns from via events).
+   * Ignored when the id isn't an emitter in the graph.
+   */
+  soloEmitterId?: string;
 }
 
 export interface CompileResult {
@@ -123,12 +128,14 @@ export function compileGraph(
     if (id) eventSourceIds.add(id);
   }
 
-  const plans: EmitterPlan[] = [];
+  const allPlans: EmitterPlan[] = [];
   const reachableUnion = new Set<string>();
+  // An emitter with nothing to draw is skipped, not an error: unplugging a renderer to
+  // hide one chain shouldn't freeze the preview on its last good build.
+  let renderless = 0;
 
   for (const em of emitters) {
     const visited = bfs(em.id);
-    for (const n of visited) reachableUnion.add(n.id);
     const spawn: GraphNode[] = [];
     const init: GraphNode[] = [];
     const update: GraphNode[] = [];
@@ -141,16 +148,15 @@ export function compileGraph(
       else if (cat === "render") renders.push(n);
     }
     if (renders.length === 0) {
-      throw new CompileError(
-        `Emitter "${em.id}" has no reachable render module — wire a SpriteRenderer in.`,
-      );
+      renderless++;
+      continue;
     }
     if (renders.length > 1) {
       throw new CompileError(
         `Emitter "${em.id}" reaches ${renders.length} render modules. Disconnect extras.`,
       );
     }
-    plans.push({
+    allPlans.push({
       emitterNode: em,
       spawn,
       init,
@@ -158,6 +164,18 @@ export function compileGraph(
       render: renders[0]!,
       name: emitterNameFromId(em.id),
     });
+  }
+
+  const plans = soloPlans(allPlans, context.soloEmitterId);
+  for (const plan of plans) {
+    for (const n of bfs(plan.emitterNode.id)) reachableUnion.add(n.id);
+  }
+  if (plans.length === 0) {
+    throw new CompileError(
+      emitters.length === 1
+        ? "The Emitter has no reachable render module — wire a SpriteRenderer in."
+        : "No emitter has a reachable render module — wire a SpriteRenderer in.",
+    );
   }
 
   // A system loop restarts every emitter, which wipes its live particles. Looping emitters
@@ -171,6 +189,17 @@ export function compileGraph(
       ),
     );
     builder = builder.duration(replayAfter).loop();
+  }
+
+  // A SpawnFromEvents whose source emitter was skipped (no renderer, or soloed out) would
+  // fail the system build; with no source there are no events, so drop it instead.
+  const built = new Set(plans.map((p) => p.emitterNode.id));
+  for (const plan of plans) {
+    plan.spawn = plan.spawn.filter((n) => {
+      if (n.data.type !== "spawn.from_events") return true;
+      const source = readEmitterRef(n.data.params, "source");
+      return !source || built.has(source);
+    });
   }
 
   for (const plan of plans) {
@@ -198,11 +227,31 @@ export function compileGraph(
     0,
   );
   const emitterTag = plans.length === 1 ? "1 emitter" : `${plans.length} emitters`;
-  const summary = `${emitterTag} · ${moduleCount} modules${
-    skipped > 0 ? ` · ${skipped} unwired (skipped)` : ""
-  }`;
+  const soloed = plans.length < allPlans.length;
+  const summary = `${emitterTag}${soloed ? " (solo)" : ""} · ${moduleCount} modules${
+    skipped > 0 ? ` · ${skipped} not previewed` : ""
+  }${renderless > 0 ? ` · ${renderless} emitter${renderless === 1 ? "" : "s"} without a renderer` : ""}`;
 
   return { def, summary: `Compiled: ${summary}` };
+}
+
+/** The soloed emitter plus every emitter it spawns from via `spawn.from_events`. */
+function soloPlans(plans: EmitterPlan[], soloId: string | undefined): EmitterPlan[] {
+  const byEmitter = new Map(plans.map((p) => [p.emitterNode.id, p]));
+  if (!soloId || !byEmitter.has(soloId)) return plans;
+  const keep = new Set<string>();
+  const stack = [soloId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (keep.has(id)) continue;
+    keep.add(id);
+    for (const n of byEmitter.get(id)?.spawn ?? []) {
+      if (n.data.type !== "spawn.from_events") continue;
+      const source = readEmitterRef(n.data.params, "source");
+      if (source) stack.push(source);
+    }
+  }
+  return plans.filter((p) => keep.has(p.emitterNode.id));
 }
 
 /** Stable, plume-friendly name from a node id (e.g. "emitter_3" → "em_3"). */

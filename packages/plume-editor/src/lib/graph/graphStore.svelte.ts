@@ -181,6 +181,8 @@ for (const n of starter.nodes) {
 let nodes: PlumeNode[] = $state.raw(starter.nodes);
 let edges: Edge[] = $state.raw(starter.edges);
 let selectedId: string | undefined = $state(undefined);
+// Preview-only: never serialized, so a soloed chain can't leak into a saved effect.
+let soloEmitterId: string | undefined = $state(undefined);
 
 export const graphStore = {
   get nodes(): PlumeNode[] {
@@ -201,7 +203,51 @@ export const graphStore = {
   set selectedId(v: string | undefined) {
     selectedId = v;
   },
+  /** Emitter whose chain the preview shows alone, if it's still in the graph. */
+  get soloEmitterId(): string | undefined {
+    return soloEmitterId !== undefined && nodes.some((n) => n.id === soloEmitterId)
+      ? soloEmitterId
+      : undefined;
+  },
 };
+
+export function toggleSolo(emitterId: string): void {
+  soloEmitterId = graphStore.soloEmitterId === emitterId ? undefined : emitterId;
+}
+
+/**
+ * Nodes left out of the preview because another emitter is soloed: everything not
+ * reachable from the soloed emitter or the emitters it spawns from via events.
+ * Empty when nothing is soloed.
+ */
+export function soloHiddenIds(): Set<string> {
+  const solo = graphStore.soloEmitterId;
+  const out = new Set<string>();
+  if (!solo) return out;
+  const adj = new Map<string, string[]>();
+  for (const e of edges) {
+    if (!adj.has(e.source)) adj.set(e.source, []);
+    adj.get(e.source)!.push(e.target);
+  }
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const shown = new Set<string>();
+  const stack = [solo];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    if (shown.has(id)) continue;
+    shown.add(id);
+    const node = byId.get(id);
+    if (node?.data.type === "spawn.from_events") {
+      const ref = node.data.params["source"];
+      if (ref && typeof ref === "object" && "nodeId" in ref && typeof ref.nodeId === "string") {
+        stack.push(ref.nodeId);
+      }
+    }
+    for (const nxt of adj.get(id) ?? []) stack.push(nxt);
+  }
+  for (const n of nodes) if (!shown.has(n.id)) out.add(n.id);
+  return out;
+}
 
 export function addNode(type: string): void {
   const node = makeNode(type);

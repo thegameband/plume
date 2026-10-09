@@ -11,7 +11,14 @@
    */
   import { Handle, Position } from "@xyflow/svelte";
   import { getSpec } from "../builder/nodes.js";
-  import { type PlumeNodeData, unreachableIds, disconnectHandle } from "./graphStore.svelte.js";
+  import {
+    type PlumeNodeData,
+    graphStore,
+    unreachableIds,
+    disconnectHandle,
+    soloHiddenIds,
+    toggleSolo,
+  } from "./graphStore.svelte.js";
 
   let {
     id,
@@ -25,6 +32,9 @@
 
   const spec = $derived(getSpec(data.type));
   const unreachable = $derived(unreachableIds().has(id));
+  const isEmitter = $derived(spec.category === "emitter");
+  const soloed = $derived(graphStore.soloEmitterId === id);
+  const soloHidden = $derived(!unreachable && soloHiddenIds().has(id));
 
   // Right-click on a handle dot detaches just that side's edges. Suppress the
   // browser context menu so the gesture feels native to the editor.
@@ -41,8 +51,13 @@
   class="plume-node"
   class:selected
   class:unreachable
+  class:solo-hidden={soloHidden}
   style="--accent: {spec.accent};"
-  title={unreachable ? "Not reachable from an emitter — won't be compiled" : undefined}
+  title={unreachable
+    ? "Not reachable from an emitter — won't be compiled"
+    : soloHidden
+      ? "Hidden from the preview while another emitter is soloed"
+      : undefined}
 >
   <Handle
     type="target"
@@ -50,6 +65,18 @@
     oncontextmenu={onHandleContext("target")}
     title="Right-click to detach incoming wires"
   />
+  {#if isEmitter}
+    <button
+      type="button"
+      class="solo nodrag"
+      class:on={soloed}
+      title={soloed ? "Show every emitter again" : "Preview only this emitter's chain"}
+      onclick={(e) => {
+        e.stopPropagation();
+        toggleSolo(id);
+      }}>S</button
+    >
+  {/if}
   <div class="cat">{spec.category}</div>
   <div class="label">{spec.label}</div>
   <Handle
@@ -87,6 +114,35 @@
   }
   .plume-node.unreachable.selected {
     opacity: 1;
+  }
+  .plume-node.solo-hidden {
+    opacity: 0.35;
+  }
+  .plume-node.solo-hidden.selected {
+    opacity: 0.7;
+  }
+  .solo {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: 1px solid #3a3d46;
+    border-radius: 4px;
+    background: #14161b;
+    color: #8a909c;
+    font: 600 11px/1 system-ui, sans-serif;
+    cursor: pointer;
+  }
+  .solo:hover {
+    color: #e7e7e9;
+    border-color: #6a6f7a;
+  }
+  .solo.on {
+    background: #f6c177;
+    border-color: #f6c177;
+    color: #14161b;
   }
   .cat {
     font-size: 10px;

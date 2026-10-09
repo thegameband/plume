@@ -265,6 +265,7 @@
     return {
       depthTexture: depthTarget?.depthTexture ?? undefined,
       camera,
+      soloEmitterId: graphStore.soloEmitterId,
     };
   }
 
@@ -472,6 +473,15 @@
   $effect(() => {
     if (restartTick === 0) return;
     void rebuildAndSpawn();
+  });
+
+  // Solo is a preview toggle, so it rebuilds straight away even with Live off.
+  let lastSolo: string | undefined = graphStore.soloEmitterId;
+  $effect(() => {
+    const solo = graphStore.soloEmitterId;
+    if (solo === lastSolo) return;
+    lastSolo = solo;
+    untrack(() => void rebuildAndSpawn());
   });
 
   // Live mode: rebuild whenever any node, edge, or selectedId changes.
