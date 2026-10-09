@@ -1,0 +1,55 @@
+{
+  "name": "three-plume",
+  "version": "0.1.1",
+  "description": "GPU-first, Niagara-style VFX system for three.js. Particle simulation in compute shaders via TSL.",
+  "keywords": [
+    "three",
+    "threejs",
+    "vfx",
+    "particles",
+    "niagara",
+    "gpu",
+    "webgpu",
+    "tsl",
+    "compute",
+    "shader"
+  ],
+  "homepage": "https://github.com/travisdmathis/plume#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/travisdmathis/plume.git",
+    "directory": "packages/plume"
+  },
+  "bugs": {
+    "url": "https://github.com/travisdmathis/plume/issues"
+  },
+  "license": "MIT",
+  "author": "Travis Mathis",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "./dist/modules/**/*.js",
+    "./dist/index.js"
+  ],
+  "peerDependencies": {
+    "three": "^0.184.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "plumeSourceCommit": "34f6671"
+}
