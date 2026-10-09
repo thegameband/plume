@@ -242,6 +242,76 @@ export function disconnectHandle(id: string, side: "source" | "target"): void {
   );
 }
 
+// ─ Copy / paste ─────────────────────────────────────────────────────────────
+// xyflow mirrors its multi-selection (click, shift-click, rubber-band) onto each
+// node's `selected` flag, which flows back into `graphStore.nodes` via the
+// canvas's bind: effects — so "the selection" is just `nodes.filter(n => n.selected)`.
+
+let clipboard: { nodes: PlumeNode[]; edges: Edge[] } | null = null;
+// Each successive Ctrl+V nudges further from the original so a cascade of pastes
+// doesn't stack invisibly on top of itself. A fresh copy resets the cascade.
+let pasteCount = 0;
+const PASTE_OFFSET = 36;
+
+/** Copy every selected node, plus the wires between them, to an in-memory
+ *  clipboard (overwriting any previous copy). No-op with nothing selected. */
+export function copySelected(): void {
+  const selected = graphStore.nodes.filter((n) => n.selected);
+  if (selected.length === 0) return;
+  const ids = new Set(selected.map((n) => n.id));
+  const internalEdges = graphStore.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+  clipboard = {
+    nodes: selected.map((n) => structuredClone(n)),
+    edges: internalEdges.map((e) => structuredClone(e)),
+  };
+  pasteCount = 0;
+}
+
+/** Paste the last copy as fresh nodes with new ids, wires between them intact,
+ *  offset so they land next to (not exactly on top of) the originals. Selects
+ *  only the pasted nodes. No-op if nothing has been copied. */
+export function pasteClipboard(): void {
+  if (!clipboard || clipboard.nodes.length === 0) return;
+  pasteCount++;
+  insertCopies(clipboard.nodes, clipboard.edges, PASTE_OFFSET * pasteCount);
+}
+
+/** Copy + paste in one step, leaving the clipboard untouched. */
+export function duplicateSelected(): void {
+  const selected = graphStore.nodes.filter((n) => n.selected);
+  if (selected.length === 0) return;
+  const ids = new Set(selected.map((n) => n.id));
+  const internalEdges = graphStore.edges.filter((e) => ids.has(e.source) && ids.has(e.target));
+  insertCopies(selected, internalEdges, PASTE_OFFSET);
+}
+
+function insertCopies(sourceNodes: PlumeNode[], sourceEdges: Edge[], offset: number): void {
+  const idMap = new Map<string, string>();
+  // Cloned per insert so params (curve keys, gradient stops, shapes, …) never alias
+  // between copies — editing one must not touch another.
+  const pasted: PlumeNode[] = sourceNodes.map((n) => {
+    const newId = makeId(n.data.type);
+    idMap.set(n.id, newId);
+    return {
+      ...structuredClone(n),
+      id: newId,
+      position: { x: n.position.x + offset, y: n.position.y + offset },
+      selected: true,
+    };
+  });
+  const pastedEdges: Edge[] = [];
+  for (const e of sourceEdges) {
+    const source = idMap.get(e.source);
+    const target = idMap.get(e.target);
+    if (source && target) pastedEdges.push(makeEdge(source, target));
+  }
+  graphStore.nodes = [...graphStore.nodes.map((n) => ({ ...n, selected: false })), ...pasted];
+  graphStore.edges = [...graphStore.edges, ...pastedEdges];
+  // A single pasted node is also worth showing in the inspector; a multi-node
+  // paste leaves the inspector as-is (no single node to show there).
+  graphStore.selectedId = pasted.length === 1 ? pasted[0]!.id : undefined;
+}
+
 export function updateNodeParam(id: string, key: string, value: Params[string]): void {
   graphStore.nodes = graphStore.nodes.map((n) =>
     n.id === id ? { ...n, data: { ...n.data, params: { ...n.data.params, [key]: value } } } : n,

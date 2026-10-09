@@ -6,7 +6,14 @@
   import CodeExportModal from "./lib/CodeExportModal.svelte";
   import FileDialog from "./lib/FileDialog.svelte";
   import { editorStore } from "./lib/state.svelte.js";
-  import { graphStore, replaceGraph, resetToStarter } from "./lib/graph/graphStore.svelte.js";
+  import {
+    copySelected,
+    duplicateSelected,
+    graphStore,
+    pasteClipboard,
+    replaceGraph,
+    resetToStarter,
+  } from "./lib/graph/graphStore.svelte.js";
   import { deserialize, pickGraphFile, serialize } from "./lib/persistence.js";
   import {
     clearCurrentFile,
@@ -93,6 +100,15 @@
     } else if (event.key === "y") {
       event.preventDefault();
       redo();
+    } else if (event.key === "c" || event.key === "C") {
+      event.preventDefault();
+      copySelected();
+    } else if (event.key === "v" || event.key === "V") {
+      event.preventDefault();
+      pasteClipboard();
+    } else if (event.key === "d" || event.key === "D") {
+      event.preventDefault();
+      duplicateSelected();
     }
   }
 
