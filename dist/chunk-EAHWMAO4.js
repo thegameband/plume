@@ -3991,10 +3991,13 @@ var Manager = class {
     await Promise.all(warmups);
   }
   /**
-   * Pre-compile every registered prefab's compute kernels AND render pipelines against the
+   * Pre-compile registered prefabs' compute kernels AND render pipelines against the
    * renderer. Call once after registering prefabs (and ideally before first user interaction)
    * so that the first real spawn doesn't stall on WGSL → MSL/HLSL translation. Heavy emitters
    * (especially `sortByDepth: true`) can otherwise cost multiple seconds on first play.
+   *
+   * Pass `ids` to warm only those prefabs (e.g. the ones a level uses); the default is every
+   * registered prefab. Throws if an id isn't registered.
    *
    * Two pipeline classes to warm:
    *  1. Compute kernels (spawn/update/sort) — dispatched via `Emitter.warmup`.
@@ -4002,14 +4005,19 @@ var Manager = class {
    *     We attach each warmed System's object3D to the scene temporarily so its materials
    *     are walked and pre-compiled, then detach afterward.
    */
-  async warmup() {
+  async warmup(ids) {
     if (!this.camera) {
       throw new Error(
         "plume: Manager.warmup() requires a camera \u2014 set it in the constructor or assign manager.camera before calling."
       );
     }
+    const targets = ids ? [...new Set(ids)].map((id) => {
+      const input = this._prefabs.get(id);
+      if (!input) throw new Error(`plume: prefab "${id}" not registered`);
+      return [id, input];
+    }) : [...this._prefabs];
     const warmSystems = [];
-    for (const [id, input] of this._prefabs) {
+    for (const [id, input] of targets) {
       const sys = this._createSystem(input);
       warmSystems.push({ id, sys });
       this.scene.add(sys.object3D);
@@ -4772,5 +4780,5 @@ function section(lines, heading, body) {
 }
 
 export { AlphaOverLife, BeamRenderer, ColorOverLife, CurlNoiseForce, Curve1D, DepthCollision, Drag, Emitter, EmitterBuilder, FlowmapForce, FollowPosition, Gradient, Gravity, InitColor, InitFromMesh, InitLifetime, InitPosition, InitRotation, InitSize, InitVelocity, LifetimeTick, LightEmission, LimitVelocity, Manager, MeshRenderer, ParticleBuffer, PlaneCollision, PointAttractor, RNG, RibbonRenderer, ScaleBySpeed, SdfCollision, SizeOverLife, SpawnBurst, SpawnFromEvents, SpawnRate, SphereCollision, SpriteRenderer, System, SystemBuilder, TrailBuilder, TurbulenceForce, VelocityIntegrator, VelocityOverLife, VortexForce, circleTexture, disposeTextureCache, dumpShaders, emitter, emitterDefFromJSON, emitterDefToJSON, getModuleFactory, listRegisteredModules, moduleFromJSON, normalizeTextures, registerModule, sampleColor, sampleDirection, samplePosition, sampleScalar, sampleVec3, scrollUV, sdfBox, sdfIntersect, sdfPlane, sdfSphere, sdfSubtract, sdfUnion, sharedRNG, softCircleTexture, streakTexture, system, systemDefFromJSON, systemDefToJSON, toColorInput, toCurve, toGradient, toScalarInput, toVec3Input, unregisterModule };
-//# sourceMappingURL=chunk-MA4UVNIJ.js.map
-//# sourceMappingURL=chunk-MA4UVNIJ.js.map
+//# sourceMappingURL=chunk-EAHWMAO4.js.map
+//# sourceMappingURL=chunk-EAHWMAO4.js.map

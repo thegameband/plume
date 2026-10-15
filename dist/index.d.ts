@@ -1569,10 +1569,13 @@ declare class Manager {
      */
     preload(id: string, count?: number): Promise<void>;
     /**
-     * Pre-compile every registered prefab's compute kernels AND render pipelines against the
+     * Pre-compile registered prefabs' compute kernels AND render pipelines against the
      * renderer. Call once after registering prefabs (and ideally before first user interaction)
      * so that the first real spawn doesn't stall on WGSL → MSL/HLSL translation. Heavy emitters
      * (especially `sortByDepth: true`) can otherwise cost multiple seconds on first play.
+     *
+     * Pass `ids` to warm only those prefabs (e.g. the ones a level uses); the default is every
+     * registered prefab. Throws if an id isn't registered.
      *
      * Two pipeline classes to warm:
      *  1. Compute kernels (spawn/update/sort) — dispatched via `Emitter.warmup`.
@@ -1580,7 +1583,7 @@ declare class Manager {
      *     We attach each warmed System's object3D to the scene temporarily so its materials
      *     are walked and pre-compiled, then detach afterward.
      */
-    warmup(): Promise<void>;
+    warmup(ids?: Iterable<string>): Promise<void>;
     private _createSystem;
     has(id: string): boolean;
     /** Spawn a registered prefab. Returns the System or null if at capacity / unknown id. */
