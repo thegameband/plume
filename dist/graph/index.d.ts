@@ -271,6 +271,13 @@ interface CompileContext {
      * one-shot should play once and return to the pool.
      */
     replayOneShots?: boolean;
+    /**
+     * Start particles relative to where the system is spawned, whatever an InitPosition or
+     * InitFromMesh node's "World space" box says. With the box off, particles are born at fixed
+     * world coordinates — invisible in the editor preview, which plays at the origin, but a game
+     * spawning the effect at a character's foot would see it appear at the world origin instead.
+     */
+    spawnRelative?: boolean;
 }
 interface CompileResult {
     def: SystemDef;

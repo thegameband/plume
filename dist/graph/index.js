@@ -1099,7 +1099,7 @@ function applyToBuilder(e, node, context) {
       e.position({
         shape: readShape(p, "shape", { kind: "sphere", radius: 0.3, thickness: 1 }),
         offset: readVec3(p, "offset", [0, 0, 0]),
-        worldSpace: readBool(p, "worldSpace", false)
+        worldSpace: context.spawnRelative === true || readBool(p, "worldSpace", false)
       });
       break;
     case "init.velocity": {
@@ -1142,7 +1142,7 @@ function applyToBuilder(e, node, context) {
       e.fromMesh({
         geometry: geom,
         fill: readSelect(p, "fill", ["surface", "volume"], "surface"),
-        worldSpace: readBool(p, "worldSpace", false),
+        worldSpace: context.spawnRelative === true || readBool(p, "worldSpace", false),
         volumeSampleCount: readNumber(p, "volumeSampleCount", 2048)
       });
       break;
