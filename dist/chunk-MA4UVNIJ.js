@@ -3493,7 +3493,12 @@ var Emitter = class {
   async countAlive(renderer) {
     const slots = this._aliveHighWater;
     if (slots === 0) return 0;
-    const buf = await renderer.getArrayBufferAsync(this.buffer.storage.posAlive.value, null, 0, slots * 16);
+    const buf = await renderer.getArrayBufferAsync(
+      this.buffer.storage.posAlive.value,
+      null,
+      0,
+      slots * 16
+    );
     const posAlive = new Float32Array(buf);
     let count = 0;
     for (let i = 3; i < posAlive.length; i += 4) if (posAlive[i] >= 0.5) count++;
@@ -4767,5 +4772,5 @@ function section(lines, heading, body) {
 }
 
 export { AlphaOverLife, BeamRenderer, ColorOverLife, CurlNoiseForce, Curve1D, DepthCollision, Drag, Emitter, EmitterBuilder, FlowmapForce, FollowPosition, Gradient, Gravity, InitColor, InitFromMesh, InitLifetime, InitPosition, InitRotation, InitSize, InitVelocity, LifetimeTick, LightEmission, LimitVelocity, Manager, MeshRenderer, ParticleBuffer, PlaneCollision, PointAttractor, RNG, RibbonRenderer, ScaleBySpeed, SdfCollision, SizeOverLife, SpawnBurst, SpawnFromEvents, SpawnRate, SphereCollision, SpriteRenderer, System, SystemBuilder, TrailBuilder, TurbulenceForce, VelocityIntegrator, VelocityOverLife, VortexForce, circleTexture, disposeTextureCache, dumpShaders, emitter, emitterDefFromJSON, emitterDefToJSON, getModuleFactory, listRegisteredModules, moduleFromJSON, normalizeTextures, registerModule, sampleColor, sampleDirection, samplePosition, sampleScalar, sampleVec3, scrollUV, sdfBox, sdfIntersect, sdfPlane, sdfSphere, sdfSubtract, sdfUnion, sharedRNG, softCircleTexture, streakTexture, system, systemDefFromJSON, systemDefToJSON, toColorInput, toCurve, toGradient, toScalarInput, toVec3Input, unregisterModule };
-//# sourceMappingURL=chunk-3YJ3NTIL.js.map
-//# sourceMappingURL=chunk-3YJ3NTIL.js.map
+//# sourceMappingURL=chunk-MA4UVNIJ.js.map
+//# sourceMappingURL=chunk-MA4UVNIJ.js.map
