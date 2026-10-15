@@ -182,10 +182,13 @@ export class Manager {
   }
 
   /**
-   * Pre-compile every registered prefab's compute kernels AND render pipelines against the
+   * Pre-compile registered prefabs' compute kernels AND render pipelines against the
    * renderer. Call once after registering prefabs (and ideally before first user interaction)
    * so that the first real spawn doesn't stall on WGSL → MSL/HLSL translation. Heavy emitters
    * (especially `sortByDepth: true`) can otherwise cost multiple seconds on first play.
+   *
+   * Pass `ids` to warm only those prefabs (e.g. the ones a level uses); the default is every
+   * registered prefab. Throws if an id isn't registered.
    *
    * Two pipeline classes to warm:
    *  1. Compute kernels (spawn/update/sort) — dispatched via `Emitter.warmup`.
@@ -193,14 +196,21 @@ export class Manager {
    *     We attach each warmed System's object3D to the scene temporarily so its materials
    *     are walked and pre-compiled, then detach afterward.
    */
-  async warmup(): Promise<void> {
+  async warmup(ids?: Iterable<string>): Promise<void> {
     if (!this.camera) {
       throw new Error(
         "plume: Manager.warmup() requires a camera — set it in the constructor or assign manager.camera before calling.",
       );
     }
+    const targets = ids
+      ? [...new Set(ids)].map((id): [string, SystemDefInput] => {
+          const input = this._prefabs.get(id);
+          if (!input) throw new Error(`plume: prefab "${id}" not registered`);
+          return [id, input];
+        })
+      : [...this._prefabs];
     const warmSystems: Array<{ id: string; sys: System }> = [];
-    for (const [id, input] of this._prefabs) {
+    for (const [id, input] of targets) {
       const sys = this._createSystem(input);
       warmSystems.push({ id, sys });
       this.scene.add(sys.object3D);
