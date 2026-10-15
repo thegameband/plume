@@ -15,7 +15,15 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,14 +46,19 @@ const git = (args, cwd = root) => run("git", args, cwd);
 
 const sourceSha = git(["rev-parse", "--short", "HEAD"]);
 if (git(["status", "--porcelain", "--", "packages/plume"]) !== "") {
-  console.warn("warning: packages/plume has uncommitted changes; they will be in this release build.");
+  console.warn(
+    "warning: packages/plume has uncommitted changes; they will be in this release build.",
+  );
 }
 
 console.log("Building three-plume…");
 // Reuse the pnpm that launched this script; it may only exist through corepack.
 const pnpmCli = process.env["npm_execpath"];
 if (pnpmCli && /pnpm/i.test(pnpmCli)) {
-  execFileSync(process.execPath, [pnpmCli, "--filter", "three-plume", "build"], { cwd: root, stdio: "inherit" });
+  execFileSync(process.execPath, [pnpmCli, "--filter", "three-plume", "build"], {
+    cwd: root,
+    stdio: "inherit",
+  });
 } else {
   run("pnpm", ["--filter", "three-plume", "build"]);
 }

@@ -64,10 +64,17 @@ export function fileApiPlugin(root: string): Plugin {
         for (const entry of fs.readdirSync(dirAbs, { withFileTypes: true })) {
           if (entry.name.startsWith(".")) continue;
           if (entry.isDirectory() && !SKIP_DIRS.has(entry.name)) folders.push(entry.name);
-          else if (entry.isFile() && entry.name.toLowerCase().endsWith(".json")) files.push(entry.name);
+          else if (entry.isFile() && entry.name.toLowerCase().endsWith(".json"))
+            files.push(entry.name);
         }
-        const byName = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: "base" });
-        send(res, 200, { ...rootInfo, dir: toRel(dirAbs), folders: folders.sort(byName), files: files.sort(byName) });
+        const byName = (a: string, b: string): number =>
+          a.localeCompare(b, undefined, { sensitivity: "base" });
+        send(res, 200, {
+          ...rootInfo,
+          dir: toRel(dirAbs),
+          folders: folders.sort(byName),
+          files: files.sort(byName),
+        });
       });
 
       server.middlewares.use("/api/plume/load", (req, res) => {
@@ -80,7 +87,9 @@ export function fileApiPlugin(root: string): Plugin {
         try {
           send(res, 200, JSON.parse(fs.readFileSync(fileAbs, "utf-8")));
         } catch (err) {
-          send(res, 422, { error: `Not valid JSON: ${err instanceof Error ? err.message : String(err)}` });
+          send(res, 422, {
+            error: `Not valid JSON: ${err instanceof Error ? err.message : String(err)}`,
+          });
         }
       });
 

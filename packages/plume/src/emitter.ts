@@ -259,7 +259,12 @@ export class Emitter {
   async countAlive(renderer: WebGPURenderer): Promise<number> {
     const slots = this._aliveHighWater;
     if (slots === 0) return 0;
-    const buf = await renderer.getArrayBufferAsync(this.buffer.storage.posAlive.value, null, 0, slots * 16);
+    const buf = await renderer.getArrayBufferAsync(
+      this.buffer.storage.posAlive.value,
+      null,
+      0,
+      slots * 16,
+    );
     const posAlive = new Float32Array(buf);
     let count = 0;
     for (let i = 3; i < posAlive.length; i += 4) if (posAlive[i]! >= 0.5) count++;
