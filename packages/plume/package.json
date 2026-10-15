@@ -33,6 +33,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./graph": {
+      "types": "./dist/graph/index.d.ts",
+      "import": "./dist/graph/index.js"
     }
   },
   "files": [
@@ -43,7 +47,8 @@
   ],
   "sideEffects": [
     "./dist/modules/**/*.js",
-    "./dist/index.js"
+    "./dist/index.js",
+    "./dist/chunk-*.js"
   ],
   "scripts": {
     "build": "tsup",

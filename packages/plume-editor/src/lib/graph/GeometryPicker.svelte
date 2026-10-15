@@ -4,7 +4,7 @@
    * change shape with the selected preset. Stores `GeometryRef` objects that
    * `compile.ts` reads to instantiate the matching `THREE.BufferGeometry`.
    */
-  import type { GeometryRef } from "../builder/nodes.js";
+  import type { GeometryRef } from "three-plume/graph";
 
   let {
     value,

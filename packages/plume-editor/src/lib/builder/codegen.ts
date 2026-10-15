@@ -10,8 +10,13 @@
  * per node. Anything `compile.ts` can build, this can print.
  */
 
-import { getSpec, type Params } from "./nodes.js";
-import { alphaCurveKeys, type GraphEdge, type GraphNode } from "./compile.js";
+import {
+  alphaCurveKeys,
+  getSpec,
+  type GraphEdge,
+  type GraphNode,
+  type Params,
+} from "three-plume/graph";
 
 export function generateCode(nodes: GraphNode[], edges: GraphEdge[] = []): string {
   const emitters = nodes.filter((n) => getSpec(n.data.type).category === "emitter");

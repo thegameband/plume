@@ -14,7 +14,7 @@
  * The compiler in `compile.ts` reads the same structure to instantiate plume modules.
  */
 
-import type { EmissionShape } from "three-plume";
+import type { EmissionShape } from "../index.js";
 
 export type Category = "emitter" | "spawn" | "init" | "update" | "render";
 
@@ -99,19 +99,19 @@ export interface FieldVisibility {
 
 export type Field = FieldVisibility &
   (
-  | { kind: "number"; key: string; label: string; min?: number; max?: number; step?: number }
-  | { kind: "range"; key: string; label: string; min?: number; max?: number; step?: number }
-  | { kind: "vec3"; key: string; label: string; step?: number }
-  | { kind: "color"; key: string; label: string }
-  | { kind: "select"; key: string; label: string; options: string[] }
-  | { kind: "shape"; key: string; label: string }
-  | { kind: "curve"; key: string; label: string }
-  | { kind: "gradient"; key: string; label: string }
-  | { kind: "texture"; key: string; label: string; optional?: boolean }
-  | { kind: "geometry"; key: string; label: string }
-  | { kind: "sdf"; key: string; label: string }
-  | { kind: "emitter-ref"; key: string; label: string }
-  | { kind: "boolean"; key: string; label: string }
+    | { kind: "number"; key: string; label: string; min?: number; max?: number; step?: number }
+    | { kind: "range"; key: string; label: string; min?: number; max?: number; step?: number }
+    | { kind: "vec3"; key: string; label: string; step?: number }
+    | { kind: "color"; key: string; label: string }
+    | { kind: "select"; key: string; label: string; options: string[] }
+    | { kind: "shape"; key: string; label: string }
+    | { kind: "curve"; key: string; label: string }
+    | { kind: "gradient"; key: string; label: string }
+    | { kind: "texture"; key: string; label: string; optional?: boolean }
+    | { kind: "geometry"; key: string; label: string }
+    | { kind: "sdf"; key: string; label: string }
+    | { kind: "emitter-ref"; key: string; label: string }
+    | { kind: "boolean"; key: string; label: string }
   );
 
 /**
@@ -153,7 +153,13 @@ export function fadeCurve(fadeIn: number, fadeOut: number): { kind: "curve1d"; k
   const start = Math.max(0, Math.min(1, fadeIn));
   const end = 1 - Math.max(0, Math.min(1, fadeOut));
   if (start >= end) {
-    return { kind: "curve1d", keys: [{ t: 0, v: 1 }, { t: 1, v: 1 }] };
+    return {
+      kind: "curve1d",
+      keys: [
+        { t: 0, v: 1 },
+        { t: 1, v: 1 },
+      ],
+    };
   }
   return {
     kind: "curve1d",

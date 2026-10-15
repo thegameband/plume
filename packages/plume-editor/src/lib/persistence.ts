@@ -12,28 +12,16 @@
  */
 
 import type { Edge } from "@xyflow/svelte";
-import { getSpec, migrateParams, type Params } from "./builder/nodes.js";
+import { GRAPH_FORMAT_VERSION, parseGraphDocument, type GraphDocument } from "three-plume/graph";
 import type { PlumeNode } from "./graph/graphStore.svelte.js";
 
 export const STORAGE_KEY = "plume-editor:graph-v1";
-const FORMAT_VERSION = 1;
 
-export interface SerializedGraph {
-  version: number;
-  /** Effect name; matches the file name (without `.json`) it was saved as. */
-  name?: string;
-  nodes: Array<{
-    id: string;
-    type: string;
-    position: { x: number; y: number };
-    params: Params;
-  }>;
-  edges: Array<{ id: string; source: string; target: string }>;
-}
+export type SerializedGraph = GraphDocument;
 
 export function serialize(nodes: PlumeNode[], edges: Edge[], name?: string): SerializedGraph {
   return {
-    version: FORMAT_VERSION,
+    version: GRAPH_FORMAT_VERSION,
     ...(name ? { name } : {}),
     nodes: nodes.map((n) => ({
       id: n.id,
@@ -48,58 +36,18 @@ export function serialize(nodes: PlumeNode[], edges: Edge[], name?: string): Ser
 /** Parse and validate a saved graph. Throws on malformed input — the caller is
  *  expected to surface the message to the user. */
 export function deserialize(raw: unknown): { nodes: PlumeNode[]; edges: Edge[]; name?: string } {
-  if (!raw || typeof raw !== "object") throw new Error("Not a graph file.");
-  const obj = raw as Partial<SerializedGraph>;
-  if (obj.version !== FORMAT_VERSION) {
-    throw new Error(`Unsupported graph version ${obj.version} (expected ${FORMAT_VERSION}).`);
-  }
-  if (!Array.isArray(obj.nodes) || !Array.isArray(obj.edges)) {
-    throw new Error("Graph missing nodes/edges arrays.");
-  }
-
-  const nodes: PlumeNode[] = obj.nodes.map((raw, idx) => {
-    if (
-      !raw ||
-      typeof raw.id !== "string" ||
-      typeof raw.type !== "string" ||
-      !raw.position ||
-      typeof raw.position.x !== "number" ||
-      typeof raw.position.y !== "number"
-    ) {
-      throw new Error(`Node #${idx} is malformed.`);
-    }
-    // Cross-check with the spec catalog so we fail loudly if a stale graph
-    // references a removed module type.
-    getSpec(raw.type);
-    return {
-      id: raw.id,
-      type: "plume",
-      position: { x: raw.position.x, y: raw.position.y },
-      data: {
-        type: raw.type,
-        params: migrateParams(raw.type, (raw.params ?? {}) as Params),
-      },
-    };
-  });
-
-  const edges: Edge[] = obj.edges.map((raw, idx) => {
-    if (
-      !raw ||
-      typeof raw.id !== "string" ||
-      typeof raw.source !== "string" ||
-      typeof raw.target !== "string"
-    ) {
-      throw new Error(`Edge #${idx} is malformed.`);
-    }
-    return {
-      id: raw.id,
-      source: raw.source,
-      target: raw.target,
-      style: "stroke:#3a72ad;stroke-width:1.5;",
-    };
-  });
-
-  return { nodes, edges, name: typeof obj.name === "string" ? obj.name : undefined };
+  const doc = parseGraphDocument(raw);
+  const nodes: PlumeNode[] = doc.nodes.map((n) => ({
+    id: n.id,
+    type: "plume",
+    position: n.position,
+    data: { type: n.type, params: n.params },
+  }));
+  const edges: Edge[] = doc.edges.map((e) => ({
+    ...e,
+    style: "stroke:#3a72ad;stroke-width:1.5;",
+  }));
+  return { nodes, edges, name: doc.name };
 }
 
 // ─ localStorage helpers ────────────────────────────────────────────────────

@@ -5,8 +5,7 @@
    * data URLs directly in the graph so save/load round-trip without an external
    * asset store — fine for an editor at this scale.
    */
-  import type { TextureRef } from "../builder/nodes.js";
-  import { fileToDataUrl } from "../builder/textures.js";
+  import type { TextureRef } from "three-plume/graph";
 
   let {
     value,
@@ -19,6 +18,15 @@
   } = $props();
 
   let inputEl: HTMLInputElement | undefined = $state();
+
+  function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (): void => resolve(reader.result as string);
+      reader.onerror = (): void => reject(reader.error ?? new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+  }
 
   async function pick(event: Event): Promise<void> {
     const file = (event.currentTarget as HTMLInputElement).files?.[0];

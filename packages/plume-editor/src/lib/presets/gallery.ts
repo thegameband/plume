@@ -10,7 +10,7 @@
 
 import type { Edge } from "@xyflow/svelte";
 import { makeNode, type PlumeNode } from "../graph/graphStore.svelte.js";
-import { fadeCurve } from "../builder/nodes.js";
+import { fadeCurve } from "three-plume/graph";
 
 interface Preset {
   name: string;

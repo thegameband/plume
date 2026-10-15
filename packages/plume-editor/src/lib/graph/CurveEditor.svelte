@@ -5,7 +5,7 @@
    * be polish for a later session — the list form is enough to author any
    * keyframe configuration.
    */
-  import type { CurveKey } from "../builder/nodes.js";
+  import type { CurveKey } from "three-plume/graph";
 
   let {
     keys,

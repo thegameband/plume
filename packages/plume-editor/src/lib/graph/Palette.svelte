@@ -5,7 +5,7 @@
    * enforces exactly-one and the starter graph already has it; users delete-and-readd
    * indirectly by editing fields on the existing one.
    */
-  import { NODE_SPECS, type Category } from "../builder/nodes.js";
+  import { NODE_SPECS, type Category } from "three-plume/graph";
   import { addNode } from "./graphStore.svelte.js";
 
   const categoryOrder: Category[] = ["emitter", "spawn", "init", "update", "render"];

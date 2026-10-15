@@ -16,7 +16,7 @@
     type GeometryRef,
     type SdfRef,
     type EmitterRef,
-  } from "../builder/nodes.js";
+  } from "three-plume/graph";
   import {
     graphStore,
     removeNode,

@@ -11,9 +11,16 @@ const fileRoot =
 export default defineConfig({
   plugins: [svelte(), fileApiPlugin(fileRoot)],
   resolve: {
-    alias: {
-      "three-plume": fileURLToPath(new URL("../plume/src/index.ts", import.meta.url)),
-    },
+    alias: [
+      {
+        find: /^three-plume\/graph$/,
+        replacement: fileURLToPath(new URL("../plume/src/graph/index.ts", import.meta.url)),
+      },
+      {
+        find: /^three-plume$/,
+        replacement: fileURLToPath(new URL("../plume/src/index.ts", import.meta.url)),
+      },
+    ],
   },
   server: {
     port: 5174,

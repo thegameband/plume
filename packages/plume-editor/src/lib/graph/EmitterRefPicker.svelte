@@ -3,9 +3,9 @@
    * Picks an emitter from the current graph by node id. The compiler resolves
    * the id to a generated emitter name when building the SystemDef.
    */
-  import type { EmitterRef } from "../builder/nodes.js";
+  import type { EmitterRef } from "three-plume/graph";
   import { graphStore } from "./graphStore.svelte.js";
-  import { getSpec } from "../builder/nodes.js";
+  import { getSpec } from "three-plume/graph";
 
   let {
     value,

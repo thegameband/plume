@@ -10,8 +10,8 @@
   import { Manager, type FollowTarget, type System } from "three-plume";
 
   import { graphStore, updateNodeParam } from "../graph/graphStore.svelte.js";
-  import { getSpec } from "../builder/nodes.js";
-  import { compileGraph, CompileError, type CompileContext } from "../builder/compile.js";
+  import { getSpec } from "three-plume/graph";
+  import { compileGraph, CompileError, type CompileContext } from "three-plume/graph";
   import { editorStore } from "../state.svelte.js";
 
   /** Vec3 field keys that get a draggable in-scene gizmo when the owning node

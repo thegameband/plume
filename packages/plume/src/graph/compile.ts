@@ -26,8 +26,8 @@ import type {
   DepthCollisionMode,
   DepthCollisionNormal,
   SdfCollisionMode,
-} from "three-plume";
-import { Curve1D, Gradient, system, sdfSphere, sdfBox, sdfPlane } from "three-plume";
+} from "../index.js";
+import { Curve1D, Gradient, system, sdfSphere, sdfBox, sdfPlane } from "../index.js";
 import { fadeCurve, getSpec, type CurveKey, type Params } from "./nodes.js";
 import { getTexture } from "./textures.js";
 import { CLOUD_NOISE_TEXTURE_KEY, getCloudNoiseTexture } from "./cloudShaders.js";
@@ -62,6 +62,19 @@ export interface CompileContext {
    * Ignored when the id isn't an emitter in the graph.
    */
   soloEmitterId?: string;
+  /**
+   * The noise image `clouds` / `impact_cloud` sprites fall back to when their texture slot is
+   * empty. Defaults to `DEFAULT_CLOUD_NOISE_URL`, where the editor serves it.
+   */
+  cloudNoiseUrl?: string;
+  /** Name given to the built system. Defaults to "editor_graph". */
+  systemName?: string;
+  /**
+   * Restart the whole system once its one-shot emitters have finished, so a preview keeps
+   * replaying them. Defaults to true; turn it off for effects spawned in a game, where a
+   * one-shot should play once and return to the pool.
+   */
+  replayOneShots?: boolean;
 }
 
 export interface CompileResult {
@@ -181,8 +194,11 @@ export function compileGraph(
   // A system loop restarts every emitter, which wipes its live particles. Looping emitters
   // restart themselves seamlessly, so only add one to replay one-shot emitters — and only
   // once their last particles have died.
-  let builder = system("editor_graph");
-  if (!plans.every((p) => readBool(p.emitterNode.data.params, "loop", true))) {
+  let builder = system(context.systemName ?? "editor_graph");
+  if (
+    context.replayOneShots !== false &&
+    !plans.every((p) => readBool(p.emitterNode.data.params, "loop", true))
+  ) {
     const replayAfter = Math.max(
       ...plans.map(
         (p) => readNumber(p.emitterNode.data.params, "duration", 2) + maxLifetime(p.init),
@@ -540,7 +556,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       const colorNode =
         isTextureShader || isCloudShader || !tex ? buildSpriteColorNode(shader) : undefined;
       const textures: Record<string, THREE.Texture> | undefined = isCloudShader
-        ? { [CLOUD_NOISE_TEXTURE_KEY]: tex ?? getCloudNoiseTexture() }
+        ? { [CLOUD_NOISE_TEXTURE_KEY]: tex ?? getCloudNoiseTexture(context.cloudNoiseUrl) }
         : tex
           ? { base: tex }
           : undefined;
@@ -551,11 +567,12 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
           | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
-        orientation: readSelect(p, "orientation", ["camera", "upright", "ground", "wall"], "camera") as
-          | "camera"
-          | "upright"
-          | "ground"
-          | "wall",
+        orientation: readSelect(
+          p,
+          "orientation",
+          ["camera", "upright", "ground", "wall"],
+          "camera",
+        ) as "camera" | "upright" | "ground" | "wall",
         facingAngle: readNumber(p, "facingAngle", 0),
         depthTest: readBool(p, "depthTest", true),
         depthWrite: readBool(p, "depthWrite", false),

@@ -4,7 +4,7 @@
    * per stop (`t` + RGBA fields + a colour swatch). Stop ordering on render is
    * by `t`, but we don't mutate the source list during editing.
    */
-  import type { GradientStopJSON } from "../builder/nodes.js";
+  import type { GradientStopJSON } from "three-plume/graph";
 
   let {
     stops,

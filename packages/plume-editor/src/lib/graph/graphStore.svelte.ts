@@ -8,7 +8,7 @@
  */
 
 import type { Node, Edge } from "@xyflow/svelte";
-import { getSpec, type Params, type Category } from "../builder/nodes.js";
+import { getSpec, type Params, type Category } from "three-plume/graph";
 import { loadFromStorage, saveToStorage, clearStorage } from "../persistence.js";
 
 // `unreachableIds` is computed once on each access by walking every emitter via

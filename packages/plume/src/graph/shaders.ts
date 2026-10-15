@@ -22,7 +22,7 @@ import {
   time,
   mx_noise_float,
 } from "three/tsl";
-import type { ColorNodeContext, ColorNodeFn } from "three-plume";
+import type { ColorNodeContext, ColorNodeFn } from "../index.js";
 import { cloudsColorNode, impactCloudColorNode } from "./cloudShaders.js";
 
 export type SpriteShader =

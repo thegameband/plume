@@ -36,14 +36,3 @@ export function getTexture(dataUrl: string): THREE.Texture {
   cache.set(dataUrl, tex);
   return tex;
 }
-
-/** Convert a File (from a file input) into a data URL. Resolves once the file
- *  is fully read. */
-export function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (): void => resolve(reader.result as string);
-    reader.onerror = (): void => reject(reader.error ?? new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-}

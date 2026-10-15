@@ -3,7 +3,7 @@
    * Signed-distance-function preset picker. Stores `SdfRef`; the compiler turns
    * it into the matching `sdfSphere` / `sdfBox` / `sdfPlane` SdfFn.
    */
-  import type { SdfRef } from "../builder/nodes.js";
+  import type { SdfRef } from "three-plume/graph";
 
   let {
     value,

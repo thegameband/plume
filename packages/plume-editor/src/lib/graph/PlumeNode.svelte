@@ -10,7 +10,7 @@
    * "won't be compiled" hint.
    */
   import { Handle, Position } from "@xyflow/svelte";
-  import { getSpec } from "../builder/nodes.js";
+  import { getSpec } from "three-plume/graph";
   import {
     type PlumeNodeData,
     graphStore,

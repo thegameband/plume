@@ -14,14 +14,28 @@
  * Use alpha blending.
  */
 
-import { cos, float, length, max, mix, pow, screenUV, sin, step, vec2, vec3, vec4 } from "three/tsl";
+import {
+  cos,
+  float,
+  length,
+  max,
+  mix,
+  pow,
+  screenUV,
+  sin,
+  step,
+  vec2,
+  vec3,
+  vec4,
+} from "three/tsl";
 import type { Node } from "three/webgpu";
-import type { ColorNodeContext, ColorNodeFn } from "three-plume";
-import * as THREE from "three";
+import type { ColorNodeContext, ColorNodeFn } from "../index.js";
+import type * as THREE from "three";
 import { getTexture } from "./textures.js";
 
 export const CLOUD_NOISE_TEXTURE_KEY = "cloudNoise";
-const CLOUD_NOISE_TEXTURE_URL = "/textures/voronoi_08_512.png";
+/** Where the Plume editor serves the bundled noise; apps override it with `cloudNoiseUrl`. */
+export const DEFAULT_CLOUD_NOISE_URL = "/textures/voronoi_08_512.png";
 
 /** The Mapping rotation drivers are `frame / n` at the Blender scene's 24 fps. */
 const BLENDER_FPS = 24;
@@ -39,8 +53,8 @@ const IMPACT_CUTOUT_OPEN = 0.2;
 type Float = Node<"float">;
 type Vec2 = Node<"vec2">;
 
-export function getCloudNoiseTexture(): THREE.Texture {
-  return getTexture(CLOUD_NOISE_TEXTURE_URL);
+export function getCloudNoiseTexture(url: string = DEFAULT_CLOUD_NOISE_URL): THREE.Texture {
+  return getTexture(url);
 }
 
 export function cloudsColorNode(): ColorNodeFn {
