@@ -75,6 +75,13 @@ export interface CompileContext {
    * one-shot should play once and return to the pool.
    */
   replayOneShots?: boolean;
+  /**
+   * Start particles relative to where the system is spawned, whatever an InitPosition or
+   * InitFromMesh node's "World space" box says. With the box off, particles are born at fixed
+   * world coordinates — invisible in the editor preview, which plays at the origin, but a game
+   * spawning the effect at a character's foot would see it appear at the world origin instead.
+   */
+  spawnRelative?: boolean;
 }
 
 export interface CompileResult {
@@ -319,7 +326,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       e.position({
         shape: readShape(p, "shape", { kind: "sphere", radius: 0.3, thickness: 1 }),
         offset: readVec3(p, "offset", [0, 0, 0]),
-        worldSpace: readBool(p, "worldSpace", false),
+        worldSpace: context.spawnRelative === true || readBool(p, "worldSpace", false),
       });
       break;
     case "init.velocity": {
@@ -362,7 +369,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
       e.fromMesh({
         geometry: geom,
         fill: readSelect(p, "fill", ["surface", "volume"], "surface") as "surface" | "volume",
-        worldSpace: readBool(p, "worldSpace", false),
+        worldSpace: context.spawnRelative === true || readBool(p, "worldSpace", false),
         volumeSampleCount: readNumber(p, "volumeSampleCount", 2048),
       });
       break;
@@ -562,9 +569,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
           : undefined;
       e.renderSprite({
         blending: readSelect(p, "blending", ["additive", "alpha", "normal"], "additive") as
-          | "additive"
-          | "alpha"
-          | "normal",
+          "additive" | "alpha" | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
         orientation: readSelect(
@@ -595,9 +600,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
         width: readNumber(p, "width", 0.05),
         historyLength: readNumber(p, "historyLength", 32),
         blending: readSelect(p, "blending", ["additive", "alpha", "normal"], "additive") as
-          | "additive"
-          | "alpha"
-          | "normal",
+          "additive" | "alpha" | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
         ...(tex ? { textures: { base: tex } } : {}),
@@ -619,9 +622,7 @@ function applyToBuilder(e: EmitterBuilder, node: GraphNode, context: CompileCont
         width: readNumber(p, "width", 0.05),
         taperToTail: readSelect(p, "taper", ["to-tail", "uniform"], "to-tail") === "to-tail",
         blending: readSelect(p, "blending", ["additive", "alpha", "normal"], "additive") as
-          | "additive"
-          | "alpha"
-          | "normal",
+          "additive" | "alpha" | "normal",
         opacity: readNumber(p, "opacity", 1),
         renderOrder: readNumber(p, "renderOrder", 0),
         ...(tex ? { textures: { base: tex } } : {}),
